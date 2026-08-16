@@ -5,139 +5,97 @@ using UnityEngine.Rendering;
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class PlanetGenerator : MonoBehaviour
 {
-    [Header("Planet Settings")]
-    [Min(1f)]
-    public float radius = 10f;
-
-    [Range(0, 7)]
-    public int subdivisions = 3;
-
     private MeshFilter meshFilter;
-    private List<Vector3> vertices;
-    private List<int> triangles;
+
+    private List<Vector3> icoVertices;
+    private List<int> icoTriangles;
     private Dictionary<long, int> midpointCache;
+
+    private List<Vector3> visualVertices;
+    private List<int> visualTriangles;
 
     private void Awake()
     {
         meshFilter = GetComponent<MeshFilter>();
-        GeneratePlanet();
     }
 
-    public void GeneratePlanet()
+    public void Generate(Planet planet, int subdivisions)
     {
-        vertices = new List<Vector3>();
-        triangles = new List<int>();
+        icoVertices = new List<Vector3>();
+        icoTriangles = new List<int>();
         midpointCache = new Dictionary<long, int>();
 
-        CreateIcosahedron();
+        visualVertices = new List<Vector3>();
+        visualTriangles = new List<int>();
+
+        CreateIcosahedron(planet.unityRadius);
 
         for (int i = 0; i < subdivisions; i++)
         {
-            Subdivide();
+            Subdivide(planet.unityRadius);
         }
 
+        GenerateDualMesh(planet.unityRadius);
         BuildMesh();
+
+        // Populate the Planet's data array
+        InitializeCellData(planet);
     }
 
-    private void CreateIcosahedron()
+    private void CreateIcosahedron(float radius)
     {
-        // The Golden Ratio
         float t = (1f + Mathf.Sqrt(5f)) / 2f;
 
-        // Base 12 vertices of an icosahedron
-        AddVertex(new Vector3(-1, t, 0));
-        AddVertex(new Vector3(1, t, 0));
-        AddVertex(new Vector3(-1, -t, 0));
-        AddVertex(new Vector3(1, -t, 0));
+        AddIcoVertex(new Vector3(-1, t, 0), radius);
+        AddIcoVertex(new Vector3(1, t, 0), radius);
+        AddIcoVertex(new Vector3(-1, -t, 0), radius);
+        AddIcoVertex(new Vector3(1, -t, 0), radius);
 
-        AddVertex(new Vector3(0, -1, t));
-        AddVertex(new Vector3(0, 1, t));
-        AddVertex(new Vector3(0, -1, -t));
-        AddVertex(new Vector3(0, 1, -t));
+        AddIcoVertex(new Vector3(0, -1, t), radius);
+        AddIcoVertex(new Vector3(0, 1, t), radius);
+        AddIcoVertex(new Vector3(0, -1, -t), radius);
+        AddIcoVertex(new Vector3(0, 1, -t), radius);
 
-        AddVertex(new Vector3(t, 0, -1));
-        AddVertex(new Vector3(t, 0, 1));
-        AddVertex(new Vector3(-t, 0, -1));
-        AddVertex(new Vector3(-t, 0, 1));
+        AddIcoVertex(new Vector3(t, 0, -1), radius);
+        AddIcoVertex(new Vector3(t, 0, 1), radius);
+        AddIcoVertex(new Vector3(-t, 0, -1), radius);
+        AddIcoVertex(new Vector3(-t, 0, 1), radius);
 
-        // 20 faces (triangles) with correct clockwise winding order for Unity
-        // 5 faces around point 0
-        AddTriangle(0, 11, 5);
-        AddTriangle(0, 5, 1);
-        AddTriangle(0, 1, 7);
-        AddTriangle(0, 7, 10);
-        AddTriangle(0, 10, 11);
-
-        // 5 adjacent faces
-        AddTriangle(1, 5, 9);
-        AddTriangle(5, 11, 4);
-        AddTriangle(11, 10, 2);
-        AddTriangle(10, 7, 6);
-        AddTriangle(7, 1, 8);
-
-        // 5 faces around point 3
-        AddTriangle(3, 9, 4);
-        AddTriangle(3, 4, 2);
-        AddTriangle(3, 2, 6);
-        AddTriangle(3, 6, 8);
-        AddTriangle(3, 8, 9);
-
-        // 5 adjacent faces
-        AddTriangle(4, 9, 5);
-        AddTriangle(2, 4, 11);
-        AddTriangle(6, 2, 10);
-        AddTriangle(8, 6, 7);
-        AddTriangle(9, 8, 1);
+        AddIcoTriangle(0, 11, 5); AddIcoTriangle(0, 5, 1); AddIcoTriangle(0, 1, 7); AddIcoTriangle(0, 7, 10); AddIcoTriangle(0, 10, 11);
+        AddIcoTriangle(1, 5, 9); AddIcoTriangle(5, 11, 4); AddIcoTriangle(11, 10, 2); AddIcoTriangle(10, 7, 6); AddIcoTriangle(7, 1, 8);
+        AddIcoTriangle(3, 9, 4); AddIcoTriangle(3, 4, 2); AddIcoTriangle(3, 2, 6); AddIcoTriangle(3, 6, 8); AddIcoTriangle(3, 8, 9);
+        AddIcoTriangle(4, 9, 5); AddIcoTriangle(2, 4, 11); AddIcoTriangle(6, 2, 10); AddIcoTriangle(8, 6, 7); AddIcoTriangle(9, 8, 1);
     }
 
-    private void Subdivide()
+    private void Subdivide(float radius)
     {
         List<int> newTriangles = new List<int>();
         midpointCache.Clear();
 
-        // Iterate through existing triangles and split each into 4 new triangles
-        for (int i = 0; i < triangles.Count; i += 3)
+        for (int i = 0; i < icoTriangles.Count; i += 3)
         {
-            int v1 = triangles[i];
-            int v2 = triangles[i + 1];
-            int v3 = triangles[i + 2];
+            int v1 = icoTriangles[i];
+            int v2 = icoTriangles[i + 1];
+            int v3 = icoTriangles[i + 2];
 
-            int a = GetMidpoint(v1, v2);
-            int b = GetMidpoint(v2, v3);
-            int c = GetMidpoint(v3, v1);
+            int a = GetMidpoint(v1, v2, radius);
+            int b = GetMidpoint(v2, v3, radius);
+            int c = GetMidpoint(v3, v1, radius);
 
-            // Triangle 1 (Top)
-            newTriangles.Add(v1);
-            newTriangles.Add(a);
-            newTriangles.Add(c);
-
-            // Triangle 2 (Bottom Right)
-            newTriangles.Add(v2);
-            newTriangles.Add(b);
-            newTriangles.Add(a);
-
-            // Triangle 3 (Bottom Left)
-            newTriangles.Add(v3);
-            newTriangles.Add(c);
-            newTriangles.Add(b);
-
-            // Triangle 4 (Center)
-            newTriangles.Add(a);
-            newTriangles.Add(b);
-            newTriangles.Add(c);
+            newTriangles.Add(v1); newTriangles.Add(a); newTriangles.Add(c);
+            newTriangles.Add(v2); newTriangles.Add(b); newTriangles.Add(a);
+            newTriangles.Add(v3); newTriangles.Add(c); newTriangles.Add(b);
+            newTriangles.Add(a); newTriangles.Add(b); newTriangles.Add(c);
         }
 
-        triangles = newTriangles;
+        icoTriangles = newTriangles;
     }
 
-    private int GetMidpoint(int v1, int v2)
+    private int GetMidpoint(int v1, int v2, float radius)
     {
-        // Ensure the smaller index is always first to create a consistent dictionary key
         bool firstIsSmaller = v1 < v2;
         long smallerIndex = firstIsSmaller ? v1 : v2;
         long greaterIndex = firstIsSmaller ? v2 : v1;
-
-        // Bitwise shift to combine two 32-bit ints into a single 64-bit long key
         long key = (smallerIndex << 32) + greaterIndex;
 
         if (midpointCache.TryGetValue(key, out int midpointIndex))
@@ -145,45 +103,127 @@ public class PlanetGenerator : MonoBehaviour
             return midpointIndex;
         }
 
-        // Calculate the midpoint, normalize it to push it to the sphere surface, and scale by radius
-        Vector3 point1 = vertices[v1];
-        Vector3 point2 = vertices[v2];
-        Vector3 midpoint = (point1 + point2).normalized * radius;
-
-        int newIndex = vertices.Count;
-        vertices.Add(midpoint);
+        Vector3 midpoint = (icoVertices[v1] + icoVertices[v2]).normalized * radius;
+        int newIndex = icoVertices.Count;
+        icoVertices.Add(midpoint);
         midpointCache.Add(key, newIndex);
 
         return newIndex;
     }
 
-    private void AddVertex(Vector3 vertex)
+    private void AddIcoVertex(Vector3 vertex, float radius)
     {
-        // Normalize and scale the base icosahedron vertices
-        vertices.Add(vertex.normalized * radius);
+        icoVertices.Add(vertex.normalized * radius);
     }
 
-    private void AddTriangle(int v1, int v2, int v3)
+    private void AddIcoTriangle(int v1, int v2, int v3)
     {
-        triangles.Add(v1);
-        triangles.Add(v2);
-        triangles.Add(v3);
+        icoTriangles.Add(v1);
+        icoTriangles.Add(v2);
+        icoTriangles.Add(v3);
+    }
+
+    private void GenerateDualMesh(float radius)
+    {
+        List<Vector3> centroids = new List<Vector3>();
+        Dictionary<int, List<int>> vertexToCentroids = new Dictionary<int, List<int>>();
+
+        for (int i = 0; i < icoVertices.Count; i++)
+        {
+            vertexToCentroids[i] = new List<int>();
+        }
+
+        int centroidIndex = 0;
+        for (int i = 0; i < icoTriangles.Count; i += 3)
+        {
+            int v1 = icoTriangles[i];
+            int v2 = icoTriangles[i + 1];
+            int v3 = icoTriangles[i + 2];
+
+            Vector3 centroid = ((icoVertices[v1] + icoVertices[v2] + icoVertices[v3]) / 3f).normalized * radius;
+            centroids.Add(centroid);
+
+            vertexToCentroids[v1].Add(centroidIndex);
+            vertexToCentroids[v2].Add(centroidIndex);
+            vertexToCentroids[v3].Add(centroidIndex);
+
+            centroidIndex++;
+        }
+
+        for (int i = 0; i < icoVertices.Count; i++)
+        {
+            Vector3 cellCenter = icoVertices[i];
+            List<int> connectedCentroids = vertexToCentroids[i];
+
+            SortCentroidsClockwise(cellCenter, connectedCentroids, centroids);
+            CreateVisualCell(cellCenter, connectedCentroids, centroids);
+        }
+    }
+
+    private void SortCentroidsClockwise(Vector3 center, List<int> connectedCentroids, List<Vector3> centroids)
+    {
+        Vector3 normal = center.normalized;
+        Vector3 referenceDirection = (centroids[connectedCentroids[0]] - center).normalized;
+
+        connectedCentroids.Sort((a, b) =>
+        {
+            Vector3 dirA = (centroids[a] - center).normalized;
+            Vector3 dirB = (centroids[b] - center).normalized;
+
+            float angleA = Vector3.SignedAngle(referenceDirection, dirA, normal);
+            float angleB = Vector3.SignedAngle(referenceDirection, dirB, normal);
+
+            return angleA.CompareTo(angleB);
+        });
+    }
+
+    private void CreateVisualCell(Vector3 center, List<int> connectedCentroids, List<Vector3> centroids)
+    {
+        int centerVertexIndex = visualVertices.Count;
+        visualVertices.Add(center);
+
+        int perimeterStartIndex = visualVertices.Count;
+        for (int i = 0; i < connectedCentroids.Count; i++)
+        {
+            visualVertices.Add(centroids[connectedCentroids[i]]);
+        }
+
+        int count = connectedCentroids.Count;
+        for (int i = 0; i < count; i++)
+        {
+            int nextIndex = (i + 1) % count;
+            visualTriangles.Add(centerVertexIndex);
+            visualTriangles.Add(perimeterStartIndex + i);
+            visualTriangles.Add(perimeterStartIndex + nextIndex);
+        }
     }
 
     private void BuildMesh()
     {
         Mesh mesh = new Mesh();
-        mesh.name = "Icosphere";
-
-        // Crucial: Allows meshes with more than 65,535 vertices
+        mesh.name = "Goldberg Polyhedron";
         mesh.indexFormat = IndexFormat.UInt32;
 
-        mesh.SetVertices(vertices);
-        mesh.SetTriangles(triangles, 0);
+        mesh.SetVertices(visualVertices);
+        mesh.SetTriangles(visualTriangles, 0);
 
         mesh.RecalculateNormals();
         mesh.RecalculateBounds();
 
         meshFilter.sharedMesh = mesh;
+    }
+
+    private void InitializeCellData(Planet planet)
+    {
+        planet.cells = new Cell[icoVertices.Count];
+
+        for (int i = 0; i < icoVertices.Count; i++)
+        {
+            planet.cells[i] = new Cell
+            {
+                id = i,
+                localPosition = icoVertices[i]
+            };
+        }
     }
 }
