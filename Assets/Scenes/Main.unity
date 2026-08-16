@@ -206,7 +206,7 @@ Transform:
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: -10}
+  m_LocalPosition: {x: 1500, y: 1, z: -1310}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -469,7 +469,13 @@ MonoBehaviour:
     radiusKm: 6371
   - name: Moon
     radiusKm: 1737
-  defaultPlanetMaterial: {fileID: 2100000, guid: 7358c8dde9e49c84782aa6a5831929c3, type: 2}
+  - name: Ceres
+    radiusKm: 950
+  - name: Titania
+    radiusKm: 788
+  - name: Some rock
+    radiusKm: 50
+  defaultPlanetMaterial: {fileID: 2100000, guid: 6ec0d1aea9011b146a4200d536ae56c7, type: 2}
 --- !u!4 &2064081173
 Transform:
   m_ObjectHideFlags: 0

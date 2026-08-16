@@ -14,6 +14,10 @@ public class PlanetGenerator : MonoBehaviour
     private List<Vector3> visualVertices;
     private List<int> visualTriangles;
 
+    private List<Vector2> visualUV2;
+
+    private List<Vector2> visualUV3;
+
     private void Awake()
     {
         meshFilter = GetComponent<MeshFilter>();
@@ -27,6 +31,8 @@ public class PlanetGenerator : MonoBehaviour
 
         visualVertices = new List<Vector3>();
         visualTriangles = new List<int>();
+        visualUV2 = new List<Vector2>();
+        visualUV3 = new List<Vector2>();
 
         CreateIcosahedron(planet.unityRadius);
 
@@ -38,8 +44,8 @@ public class PlanetGenerator : MonoBehaviour
         GenerateDualMesh(planet.unityRadius);
         BuildMesh();
 
-        // Populate the Planet's data array
         InitializeCellData(planet);
+        planet.InitializeVisuals();
     }
 
     private void CreateIcosahedron(float radius)
@@ -156,7 +162,7 @@ public class PlanetGenerator : MonoBehaviour
             List<int> connectedCentroids = vertexToCentroids[i];
 
             SortCentroidsClockwise(cellCenter, connectedCentroids, centroids);
-            CreateVisualCell(cellCenter, connectedCentroids, centroids);
+            CreateVisualCell(i, cellCenter, connectedCentroids, centroids);
         }
     }
 
@@ -177,15 +183,23 @@ public class PlanetGenerator : MonoBehaviour
         });
     }
 
-    private void CreateVisualCell(Vector3 center, List<int> connectedCentroids, List<Vector3> centroids)
+    private void CreateVisualCell(int cellId, Vector3 center, List<int> connectedCentroids, List<Vector3> centroids)
     {
+        float uvX = cellId % 2000;
+        float uvY = Mathf.FloorToInt(cellId / 2000f);
+        Vector2 encodedId = new Vector2(uvX, uvY);
+
         int centerVertexIndex = visualVertices.Count;
         visualVertices.Add(center);
+        visualUV2.Add(encodedId);
+        visualUV3.Add(new Vector2(0, 0));
 
         int perimeterStartIndex = visualVertices.Count;
         for (int i = 0; i < connectedCentroids.Count; i++)
         {
             visualVertices.Add(centroids[connectedCentroids[i]]);
+            visualUV2.Add(encodedId);
+            visualUV3.Add(new Vector2(1, 0));
         }
 
         int count = connectedCentroids.Count;
@@ -206,6 +220,9 @@ public class PlanetGenerator : MonoBehaviour
 
         mesh.SetVertices(visualVertices);
         mesh.SetTriangles(visualTriangles, 0);
+
+        mesh.SetUVs(1, visualUV2);
+        mesh.SetUVs(2, visualUV3);
 
         mesh.RecalculateNormals();
         mesh.RecalculateBounds();

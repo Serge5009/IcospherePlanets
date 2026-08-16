@@ -1,6 +1,12 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+public struct CellVisualData
+{
+    public int ownerId;
+    public int isHovered;
+}
+
 public class Planet : MonoBehaviour
 {
     [Header("Logical Data")]
@@ -12,25 +18,75 @@ public class Planet : MonoBehaviour
 
     public Cell[] cells;
 
-    private void Update()
+    private ComputeBuffer visualBuffer;
+    private CellVisualData[] visualDataArray;
+    private int currentHoveredId = -1;
+    private MeshRenderer meshRenderer;
+    private MaterialPropertyBlock propBlock;
+
+    public void InitializeVisuals()
     {
-        HandleMouseClick();
+        visualDataArray = new CellVisualData[cells.Length];
+
+        for (int i = 0; i < cells.Length; i++)
+        {
+            visualDataArray[i].ownerId = Random.Range(0, 5);
+            visualDataArray[i].isHovered = 0;
+        }
+
+        visualBuffer = new ComputeBuffer(cells.Length, 8);
+        visualBuffer.SetData(visualDataArray);
+
+        meshRenderer = GetComponent<MeshRenderer>();
+        propBlock = new MaterialPropertyBlock();
+        meshRenderer.GetPropertyBlock(propBlock);
+        propBlock.SetBuffer("_CellVisualData", visualBuffer);
+        meshRenderer.SetPropertyBlock(propBlock);
     }
 
-    private void HandleMouseClick()
+    private void Update()
     {
-        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+        HandleMouseInteraction();
+    }
+
+    private void HandleMouseInteraction()
+    {
+        if (Mouse.current == null) return;
+
+        Vector2 mousePosition = Mouse.current.position.ReadValue();
+        Ray ray = Camera.main.ScreenPointToRay(mousePosition);
+
+        int hoveredId = -1;
+
+        if (IntersectRaySphere(ray, transform.position, unityRadius, out Vector3 hitPoint))
         {
-            Vector2 mousePosition = Mouse.current.position.ReadValue();
-            Ray ray = Camera.main.ScreenPointToRay(mousePosition);
+            Vector3 localHit = transform.InverseTransformPoint(hitPoint);
+            hoveredId = GetNearestCell(localHit);
+        }
 
-            if (IntersectRaySphere(ray, transform.position, unityRadius, out Vector3 hitPoint))
+        if (hoveredId != currentHoveredId)
+        {
+            if (currentHoveredId != -1)
             {
-                Vector3 localHit = transform.InverseTransformPoint(hitPoint);
-                int clickedCellId = GetNearestCell(localHit);
-
-                Debug.Log($"[{planetName}] Clicked Cell ID: {clickedCellId}");
+                visualDataArray[currentHoveredId].isHovered = 0;
             }
+
+            if (hoveredId != -1)
+            {
+                visualDataArray[hoveredId].isHovered = 1;
+            }
+
+            currentHoveredId = hoveredId;
+
+            if (visualBuffer != null)
+            {
+                visualBuffer.SetData(visualDataArray);
+            }
+        }
+
+        if (Mouse.current.leftButton.wasPressedThisFrame && hoveredId != -1)
+        {
+            Debug.Log($"[{planetName}] Clicked Cell ID: {hoveredId}. Owner: {visualDataArray[hoveredId].ownerId}");
         }
     }
 
@@ -70,5 +126,14 @@ public class Planet : MonoBehaviour
         }
 
         return nearestId;
+    }
+
+    private void OnDestroy()
+    {
+        if (visualBuffer != null)
+        {
+            visualBuffer.Release();
+            visualBuffer = null;
+        }
     }
 }

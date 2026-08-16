@@ -10,14 +10,11 @@ public class SolarSystemManager : MonoBehaviour
     }
 
     [Header("System Settings")]
-    [Tooltip("Target radius for a single cell in kilometers (e.g., 50km for a large city)")]
     public float targetCellRadiusKm = 50f;
 
-    [Tooltip("Hard cap to prevent memory crashes if a planet is too large")]
     [Range(3, 8)]
     public int maxSubdivisions = 7;
 
-    [Tooltip("The fixed visual radius of all planets in Unity space")]
     public float unityVisualRadius = 1000f;
 
     [Header("Planets to Generate")]
@@ -44,7 +41,6 @@ public class SolarSystemManager : MonoBehaviour
 
             float nFloat = Mathf.Log(Mathf.Max(1, targetCellCount - 2) / 10f, 4f);
             int subdivisions = Mathf.RoundToInt(nFloat);
-
             subdivisions = Mathf.Clamp(subdivisions, 0, maxSubdivisions);
 
             int actualCellCount = 10 * (int)Mathf.Pow(4, subdivisions) + 2;
@@ -55,15 +51,15 @@ public class SolarSystemManager : MonoBehaviour
             Debug.Log($"Target Cell Radius: {targetCellRadiusKm}km | Actual Cell Radius: {actualCellRadius:F2}km");
             Debug.Log($"Subdivisions: {subdivisions} | Total Cells: {actualCellCount}");
 
-            SpawnPlanet(config, subdivisions);
+            SpawnPlanet(config, subdivisions, i);
         }
     }
 
-    private void SpawnPlanet(PlanetConfig config, int subdivisions)
+    private void SpawnPlanet(PlanetConfig config, int subdivisions, int index)
     {
         GameObject planetObj = new GameObject(config.name);
 
-        planetObj.transform.position = new Vector3(planetsToGenerate.Length * unityVisualRadius * 2.5f * Random.value, 0, 0);
+        planetObj.transform.position = new Vector3(index * unityVisualRadius * 2.5f, 0, 0);
 
         Planet planet = planetObj.AddComponent<Planet>();
         planet.planetName = config.name;
