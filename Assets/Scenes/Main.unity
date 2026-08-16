@@ -432,6 +432,60 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1592591189
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1592591191}
+  - component: {fileID: 1592591190}
+  m_Layer: 0
+  m_Name: GeopoliticsManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1592591190
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1592591189}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f685d984cae2c4548b31fa6596d49969, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GeopoliticsManager
+  startingNations:
+  - {fileID: 11400000, guid: 4d01b88eae6a95b40b166fa8c6314632, type: 2}
+  - {fileID: 11400000, guid: ce4235547c671ff498cf61c20a84db04, type: 2}
+  - {fileID: 11400000, guid: 7d3295faae16366459fb06a2843b5940, type: 2}
+  - {fileID: 11400000, guid: 62e5383f645ebd946b5aaf575d0d16bf, type: 2}
+  - {fileID: 11400000, guid: 24deee9d6cac51442932461489854d79, type: 2}
+  - {fileID: 11400000, guid: 96da0f2bfd61524489340708219216b5, type: 2}
+  - {fileID: 11400000, guid: a302779f517066642a86468744ef17bc, type: 2}
+  - {fileID: 11400000, guid: 03df6b5f6b30ee443bb1c687bea770be, type: 2}
+  unclaimedColor: {r: 0.2, g: 0.2, b: 0.2, a: 1}
+--- !u!4 &1592591191
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1592591189}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2064081171
 GameObject:
   m_ObjectHideFlags: 0
@@ -498,4 +552,5 @@ SceneRoots:
   - {fileID: 330585546}
   - {fileID: 410087041}
   - {fileID: 832575519}
+  - {fileID: 1592591191}
   - {fileID: 2064081173}

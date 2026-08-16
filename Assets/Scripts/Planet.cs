@@ -3,7 +3,7 @@ using UnityEngine.InputSystem;
 
 public struct CellVisualData
 {
-    public int ownerId;
+    public Vector4 color;
     public int isHovered;
 }
 
@@ -28,13 +28,19 @@ public class Planet : MonoBehaviour
     {
         visualDataArray = new CellVisualData[cells.Length];
 
+        int totalNations = GeopoliticsManager.Instance.GetTotalNations();
+
         for (int i = 0; i < cells.Length; i++)
         {
-            visualDataArray[i].ownerId = Random.Range(0, 5);
+            cells[i].ownerId = Random.Range(0, totalNations);
+
+            Color nationColor = GeopoliticsManager.Instance.GetNation(cells[i].ownerId).mapColor;
+
+            visualDataArray[i].color = nationColor;
             visualDataArray[i].isHovered = 0;
         }
 
-        visualBuffer = new ComputeBuffer(cells.Length, 8);
+        visualBuffer = new ComputeBuffer(cells.Length, 20);
         visualBuffer.SetData(visualDataArray);
 
         meshRenderer = GetComponent<MeshRenderer>();
@@ -86,7 +92,9 @@ public class Planet : MonoBehaviour
 
         if (Mouse.current.leftButton.wasPressedThisFrame && hoveredId != -1)
         {
-            Debug.Log($"[{planetName}] Clicked Cell ID: {hoveredId}. Owner: {visualDataArray[hoveredId].ownerId}");
+            int ownerId = cells[hoveredId].ownerId;
+            string ownerName = GeopoliticsManager.Instance.GetNation(ownerId).name;
+            Debug.Log($"[{planetName}] Clicked Cell {hoveredId}. Owner: {ownerName} (ID: {ownerId})");
         }
     }
 
@@ -95,17 +103,12 @@ public class Planet : MonoBehaviour
         hitPoint = Vector3.zero;
         Vector3 L = sphereCenter - ray.origin;
         float tca = Vector3.Dot(L, ray.direction);
-
         if (tca < 0) return false;
-
         float d2 = Vector3.Dot(L, L) - tca * tca;
         float radius2 = sphereRadius * sphereRadius;
-
         if (d2 > radius2) return false;
-
         float thc = Mathf.Sqrt(radius2 - d2);
         float t0 = tca - thc;
-
         hitPoint = ray.origin + ray.direction * t0;
         return true;
     }
@@ -114,7 +117,6 @@ public class Planet : MonoBehaviour
     {
         int nearestId = -1;
         float minDistanceSqr = float.MaxValue;
-
         for (int i = 0; i < cells.Length; i++)
         {
             float distSqr = (cells[i].localPosition - localHitPoint).sqrMagnitude;
@@ -124,7 +126,6 @@ public class Planet : MonoBehaviour
                 nearestId = i;
             }
         }
-
         return nearestId;
     }
 
