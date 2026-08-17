@@ -3,7 +3,8 @@
 
 struct CellVisualData
 {
-    float4 color;
+    float4 terrainColor;
+    float4 politicalColor;
     int isHovered;
 };
 
@@ -11,16 +12,18 @@ struct CellVisualData
     StructuredBuffer<CellVisualData> _CellVisualData;
 #endif
 
-void GetCellData_float(float2 encodedId, out float4 cellColor, out float isHovered)
+void GetCellData_float(float2 encodedId, out float4 terrainColor, out float4 politicalColor, out float isHovered)
 {
-    cellColor = float4(0.5, 0.5, 0.5, 1.0);
+    terrainColor = float4(0.5, 0.5, 0.5, 1.0);
+    politicalColor = float4(0.5, 0.5, 0.5, 1.0);
     isHovered = 0;
     
 #if !defined(SHADERGRAPH_PREVIEW)
     int id = (int) round(encodedId.y) * 2000 + (int) round(encodedId.x);
         
     CellVisualData data = _CellVisualData[id];
-    cellColor = data.color;
+    terrainColor = data.terrainColor;
+    politicalColor = data.politicalColor;
     isHovered = (float) data.isHovered;
 #endif
 }

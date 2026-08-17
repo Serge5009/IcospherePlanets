@@ -10,18 +10,22 @@ public class SolarSystemManager : MonoBehaviour
     }
 
     [Header("System Settings")]
+    [Tooltip("Target radius for a single cell in kilometers (e.g., 50km for a large city)")]
     public float targetCellRadiusKm = 50f;
 
+    [Tooltip("Hard cap to prevent memory crashes if a planet is too large")]
     [Range(3, 8)]
     public int maxSubdivisions = 7;
 
+    [Tooltip("The fixed visual radius of all planets in Unity space")]
     public float unityVisualRadius = 1000f;
 
     [Header("Planets to Generate")]
     public PlanetConfig[] planetsToGenerate;
 
     [Header("Dependencies")]
-    public Material defaultPlanetMaterial;
+    public Material terrainMaterial;
+    public Material politicalMaterial;
 
     private void Start()
     {
@@ -41,6 +45,7 @@ public class SolarSystemManager : MonoBehaviour
 
             float nFloat = Mathf.Log(Mathf.Max(1, targetCellCount - 2) / 10f, 4f);
             int subdivisions = Mathf.RoundToInt(nFloat);
+
             subdivisions = Mathf.Clamp(subdivisions, 0, maxSubdivisions);
 
             int actualCellCount = 10 * (int)Mathf.Pow(4, subdivisions) + 2;
@@ -68,11 +73,6 @@ public class SolarSystemManager : MonoBehaviour
 
         PlanetGenerator generator = planetObj.AddComponent<PlanetGenerator>();
 
-        if (defaultPlanetMaterial != null)
-        {
-            planetObj.GetComponent<MeshRenderer>().sharedMaterial = defaultPlanetMaterial;
-        }
-
-        generator.Generate(planet, subdivisions);
+        generator.Generate(planet, subdivisions, terrainMaterial, politicalMaterial);
     }
 }

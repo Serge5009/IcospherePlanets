@@ -3,7 +3,8 @@ using UnityEngine.InputSystem;
 
 public struct CellVisualData
 {
-    public Vector4 color;
+    public Vector4 terrainColor;
+    public Vector4 politicalColor;
     public int isHovered;
 }
 
@@ -13,6 +14,13 @@ public class Planet : MonoBehaviour
     public string planetName;
     public float radiusKm;
 
+    [Header("Environment")]
+    [Range(0, 22000)]
+    public float waterLevel = 0f;
+    private float lastWaterLevel = -1f;
+    private float lastUpdateTime = 0f;
+    private const float UPDATE_THROTTLE = 1.0f;
+
     [Header("Visual Data")]
     public float unityRadius = 1000f;
 
@@ -21,38 +29,65 @@ public class Planet : MonoBehaviour
     private ComputeBuffer visualBuffer;
     private CellVisualData[] visualDataArray;
     private int currentHoveredId = -1;
-    private MeshRenderer meshRenderer;
-    private MaterialPropertyBlock propBlock;
+
+    public MeshRenderer terrainRenderer;
+    public MeshRenderer politicalRenderer;
 
     public void InitializeVisuals()
     {
         visualDataArray = new CellVisualData[cells.Length];
-
         int totalNations = GeopoliticsManager.Instance.GetTotalNations();
 
         for (int i = 0; i < cells.Length; i++)
         {
+            float rand = Random.value;
+            cells[i].altitude = rand * rand * 22000f;
+
             cells[i].ownerId = Random.Range(0, totalNations);
-
-            Color nationColor = GeopoliticsManager.Instance.GetNation(cells[i].ownerId).mapColor;
-
-            visualDataArray[i].color = nationColor;
+            visualDataArray[i].politicalColor = GeopoliticsManager.Instance.GetNation(cells[i].ownerId).mapColor;
             visualDataArray[i].isHovered = 0;
         }
 
-        visualBuffer = new ComputeBuffer(cells.Length, 20);
+        UpdateBiomes();
+
+        visualBuffer = new ComputeBuffer(cells.Length, 36);
         visualBuffer.SetData(visualDataArray);
 
-        meshRenderer = GetComponent<MeshRenderer>();
-        propBlock = new MaterialPropertyBlock();
-        meshRenderer.GetPropertyBlock(propBlock);
+        MaterialPropertyBlock propBlock = new MaterialPropertyBlock();
         propBlock.SetBuffer("_CellVisualData", visualBuffer);
-        meshRenderer.SetPropertyBlock(propBlock);
+
+        terrainRenderer.SetPropertyBlock(propBlock);
+        politicalRenderer.SetPropertyBlock(propBlock);
     }
 
     private void Update()
     {
         HandleMouseInteraction();
+        HandleEnvironmentUpdates();
+    }
+
+    private void HandleEnvironmentUpdates()
+    {
+        if (Mathf.Abs(waterLevel - lastWaterLevel) > 0.1f)
+        {
+            if (Time.time - lastUpdateTime >= UPDATE_THROTTLE)
+            {
+                UpdateBiomes();
+                visualBuffer.SetData(visualDataArray);
+
+                lastWaterLevel = waterLevel;
+                lastUpdateTime = Time.time;
+            }
+        }
+    }
+
+    private void UpdateBiomes()
+    {
+        for (int i = 0; i < cells.Length; i++)
+        {
+            cells[i].currentBiome = EnvironmentManager.Instance.EvaluateBiome(cells[i].altitude, waterLevel);
+            visualDataArray[i].terrainColor = cells[i].currentBiome.biomeColor;
+        }
     }
 
     private void HandleMouseInteraction()
@@ -72,29 +107,11 @@ public class Planet : MonoBehaviour
 
         if (hoveredId != currentHoveredId)
         {
-            if (currentHoveredId != -1)
-            {
-                visualDataArray[currentHoveredId].isHovered = 0;
-            }
-
-            if (hoveredId != -1)
-            {
-                visualDataArray[hoveredId].isHovered = 1;
-            }
+            if (currentHoveredId != -1) visualDataArray[currentHoveredId].isHovered = 0;
+            if (hoveredId != -1) visualDataArray[hoveredId].isHovered = 1;
 
             currentHoveredId = hoveredId;
-
-            if (visualBuffer != null)
-            {
-                visualBuffer.SetData(visualDataArray);
-            }
-        }
-
-        if (Mouse.current.leftButton.wasPressedThisFrame && hoveredId != -1)
-        {
-            int ownerId = cells[hoveredId].ownerId;
-            string ownerName = GeopoliticsManager.Instance.GetNation(ownerId).name;
-            Debug.Log($"[{planetName}] Clicked Cell {hoveredId}. Owner: {ownerName} (ID: {ownerId})");
+            if (visualBuffer != null) visualBuffer.SetData(visualDataArray);
         }
     }
 

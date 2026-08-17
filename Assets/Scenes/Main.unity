@@ -119,6 +119,55 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &206896579
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 206896581}
+  - component: {fileID: 206896580}
+  m_Layer: 0
+  m_Name: EnvironmentManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &206896580
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 206896579}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c63d89008110024694675c46f00daf8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnvironmentManager
+  oceanBiome: {fileID: 11400000, guid: 0364e4e7373850d42b8ea0b6f56cd9a0, type: 2}
+  landBiomes:
+  - {fileID: 11400000, guid: d0a3552eb33b0d140be019f9ae4a9e07, type: 2}
+  - {fileID: 11400000, guid: de91f16fc32ee714c8ea2edca0ec04f1, type: 2}
+  - {fileID: 11400000, guid: 5120c58b20f852d40841924f1378a66c, type: 2}
+--- !u!4 &206896581
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 206896579}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &330585543
 GameObject:
   m_ObjectHideFlags: 0
@@ -470,7 +519,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 96da0f2bfd61524489340708219216b5, type: 2}
   - {fileID: 11400000, guid: a302779f517066642a86468744ef17bc, type: 2}
   - {fileID: 11400000, guid: 03df6b5f6b30ee443bb1c687bea770be, type: 2}
-  unclaimedColor: {r: 0.2, g: 0.2, b: 0.2, a: 1}
+  unclaimedColor: {r: 0.2, g: 0.2, b: 0.2, a: 0.4392157}
 --- !u!4 &1592591191
 Transform:
   m_ObjectHideFlags: 0
@@ -529,7 +578,8 @@ MonoBehaviour:
     radiusKm: 788
   - name: Some rock
     radiusKm: 50
-  defaultPlanetMaterial: {fileID: 2100000, guid: 6ec0d1aea9011b146a4200d536ae56c7, type: 2}
+  terrainMaterial: {fileID: 2100000, guid: 5d5a58ffbb12aad48b71b005c3a57dd8, type: 2}
+  politicalMaterial: {fileID: 2100000, guid: 6ec0d1aea9011b146a4200d536ae56c7, type: 2}
 --- !u!4 &2064081173
 Transform:
   m_ObjectHideFlags: 0
@@ -554,3 +604,4 @@ SceneRoots:
   - {fileID: 832575519}
   - {fileID: 1592591191}
   - {fileID: 2064081173}
+  - {fileID: 206896581}

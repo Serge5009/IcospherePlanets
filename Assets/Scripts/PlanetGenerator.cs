@@ -5,8 +5,6 @@ using UnityEngine.Rendering;
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class PlanetGenerator : MonoBehaviour
 {
-    private MeshFilter meshFilter;
-
     private List<Vector3> icoVertices;
     private List<int> icoTriangles;
     private Dictionary<long, int> midpointCache;
@@ -18,12 +16,7 @@ public class PlanetGenerator : MonoBehaviour
 
     private List<Vector2> visualUV3;
 
-    private void Awake()
-    {
-        meshFilter = GetComponent<MeshFilter>();
-    }
-
-    public void Generate(Planet planet, int subdivisions)
+    public void Generate(Planet planet, int subdivisions, Material terrainMat, Material politicalMat)
     {
         icoVertices = new List<Vector3>();
         icoTriangles = new List<int>();
@@ -42,7 +35,29 @@ public class PlanetGenerator : MonoBehaviour
         }
 
         GenerateDualMesh(planet.unityRadius);
-        BuildMesh();
+
+        Mesh terrainMesh = BuildMeshObject();
+
+        MeshFilter terrainFilter = GetComponent<MeshFilter>();
+        if (terrainFilter == null) terrainFilter = gameObject.AddComponent<MeshFilter>();
+
+        planet.terrainRenderer = GetComponent<MeshRenderer>();
+        if (planet.terrainRenderer == null) planet.terrainRenderer = gameObject.AddComponent<MeshRenderer>();
+
+        terrainFilter.sharedMesh = terrainMesh;
+        planet.terrainRenderer.sharedMaterial = terrainMat;
+
+        GameObject politicalObj = new GameObject("Political Overlay");
+        politicalObj.transform.SetParent(transform);
+        politicalObj.transform.localPosition = Vector3.zero;
+
+        politicalObj.transform.localScale = Vector3.one * 1.002f;
+
+        MeshFilter politicalFilter = politicalObj.AddComponent<MeshFilter>();
+        planet.politicalRenderer = politicalObj.AddComponent<MeshRenderer>();
+
+        politicalFilter.sharedMesh = terrainMesh;
+        planet.politicalRenderer.sharedMaterial = politicalMat;
 
         InitializeCellData(planet);
         planet.InitializeVisuals();
@@ -212,10 +227,10 @@ public class PlanetGenerator : MonoBehaviour
         }
     }
 
-    private void BuildMesh()
+    private Mesh BuildMeshObject()
     {
         Mesh mesh = new Mesh();
-        mesh.name = "Goldberg Polyhedron";
+        mesh.name = "Planet Mesh";
         mesh.indexFormat = IndexFormat.UInt32;
 
         mesh.SetVertices(visualVertices);
@@ -227,7 +242,7 @@ public class PlanetGenerator : MonoBehaviour
         mesh.RecalculateNormals();
         mesh.RecalculateBounds();
 
-        meshFilter.sharedMesh = mesh;
+        return mesh;
     }
 
     private void InitializeCellData(Planet planet)
