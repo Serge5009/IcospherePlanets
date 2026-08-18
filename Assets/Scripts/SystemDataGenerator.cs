@@ -204,6 +204,8 @@ public class SystemDataGenerator : MonoBehaviour
             asteroid.dataSubdivisions = CalculateSubdivisions(asteroid.radiusKm, maxDataSubdivisions);
             SetThreadSafeParams(asteroid);
 
+            asteroid.orbitGroupName = prefix;
+
             OrbitalParameters parameters = new OrbitalParameters
             {
                 semiMajorAxis = UnityEngine.Random.Range((float)minAU, (float)maxAU) * AstroMath.AU_TO_KM,

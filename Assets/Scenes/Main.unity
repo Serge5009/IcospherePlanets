@@ -2203,6 +2203,11 @@ MonoBehaviour:
   linearSizeMultiplier: 0.00005
   logSizeMultiplier: 0.12
   starSizeMultiplier: 0.05
+  trailMaterial: {fileID: 2100000, guid: e4fca835b4206034eaa7ff79876b8d64, type: 2}
+  trailResolution: 128
+  trailWidthMultiplier: 0.5
+  defaultTrailColor: {r: 0, g: 1, b: 0.5019608, a: 0.2}
+  highlightTrailColor: {r: 1, g: 0.707659, b: 0, a: 1}
   terrainMaterial: {fileID: 2100000, guid: 5d5a58ffbb12aad48b71b005c3a57dd8, type: 2}
   politicalMaterial: {fileID: 2100000, guid: 6ec0d1aea9011b146a4200d536ae56c7, type: 2}
 --- !u!114 &1741213817

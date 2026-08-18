@@ -1,3 +1,4 @@
+// CelestialBody.cs
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -18,6 +19,7 @@ public class CelestialBody
     public bool isTidallyLocked;
 
     public OrbitalParameters orbit;
+    public string orbitGroupName;
 
     public List<CelestialBody> orbitingBodies = new List<CelestialBody>();
     public List<OrbitNode> virtualOrbits = new List<OrbitNode>();
@@ -33,6 +35,8 @@ public class CelestialBody
     public float waterLevel;
     public bool isHighResReady = false;
 
+    public Vector3d[] cachedOrbitPoints;
+
     private double lastCalculatedTime = -1;
     private Vector3d cachedAbsolutePosition;
 
@@ -45,6 +49,7 @@ public class CelestialBody
         this.radiusKm = radiusKm;
         this.parent = parent;
         this.standardGravitationalParameter = AstroMath.GRAVITATIONAL_CONSTANT * massKg;
+        this.orbitGroupName = "None";
     }
 
     public void AddOrbitingBody(CelestialBody body, OrbitalParameters parameters)

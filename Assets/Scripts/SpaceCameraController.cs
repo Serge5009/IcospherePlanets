@@ -68,6 +68,11 @@ public class SpaceCameraController : MonoBehaviour
     public void SetFocus(CelestialBody body)
     {
         focusedBody = body;
+
+        if (currentState == CameraState.SystemView)
+        {
+            SystemDisplayManager.Instance.UpdateTrailContext(focusedBody, currentState);
+        }
     }
 
     private void HandleInput()

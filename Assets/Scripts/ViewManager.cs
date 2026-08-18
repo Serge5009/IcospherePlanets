@@ -29,11 +29,7 @@ public class ViewManager : MonoBehaviour
 
     public void TransitionToLocalView(CelestialBody body)
     {
-        if (!body.isHighResReady)
-        {
-            Debug.LogWarning("High-Res mesh is still generating in the background. Please wait.");
-            return;
-        }
+        if (!body.isHighResReady) return;
 
         currentFocusedBody = body;
 
@@ -48,6 +44,8 @@ public class ViewManager : MonoBehaviour
 
         SystemDisplayManager.Instance.gameObject.SetActive(false);
         SpawnProxyBodies(body);
+
+        SystemDisplayManager.Instance.UpdateTrailContext(body, CameraState.LocalView);
     }
 
     public void TransitionToSystemView()
@@ -57,8 +55,11 @@ public class ViewManager : MonoBehaviour
         foreach (var proxy in proxyBodies) Destroy(proxy.obj);
         proxyBodies.Clear();
 
-        currentFocusedBody = null;
         SystemDisplayManager.Instance.gameObject.SetActive(true);
+
+        SystemDisplayManager.Instance.UpdateTrailContext(currentFocusedBody, CameraState.SystemView);
+
+        currentFocusedBody = null;
     }
 
     private void SpawnProxyBodies(CelestialBody focus)
