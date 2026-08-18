@@ -9,9 +9,6 @@ public class ViewManager : MonoBehaviour
     public float localViewUnityRadius = 500f;
     public float maxProxyDistance = 15000f;
 
-    [Header("Dependencies")]
-    public SystemGenerator systemGenerator;
-
     private GameObject currentLocalPlanet;
     private CelestialBody currentFocusedBody;
     private List<(GameObject obj, CelestialBody body)> proxyBodies = new List<(GameObject, CelestialBody)>();
@@ -32,6 +29,12 @@ public class ViewManager : MonoBehaviour
 
     public void TransitionToLocalView(CelestialBody body)
     {
+        if (!body.isHighResReady)
+        {
+            Debug.LogWarning("High-Res mesh is still generating in the background. Please wait.");
+            return;
+        }
+
         currentFocusedBody = body;
 
         currentLocalPlanet = new GameObject($"{body.name} (Local View)");
@@ -41,9 +44,9 @@ public class ViewManager : MonoBehaviour
         currentLocalPlanet.transform.localScale = new Vector3(localScale, localScale, localScale);
 
         Planet planet = currentLocalPlanet.AddComponent<Planet>();
-        planet.InitializeFromData(body, body.localViewData, systemGenerator.terrainMaterial, systemGenerator.politicalMaterial);
+        planet.InitializeFromData(body, body.localViewData, SystemDisplayManager.Instance.terrainMaterial, SystemDisplayManager.Instance.politicalMaterial);
 
-        systemGenerator.gameObject.SetActive(false);
+        SystemDisplayManager.Instance.gameObject.SetActive(false);
         SpawnProxyBodies(body);
     }
 
@@ -55,7 +58,7 @@ public class ViewManager : MonoBehaviour
         proxyBodies.Clear();
 
         currentFocusedBody = null;
-        systemGenerator.gameObject.SetActive(true);
+        SystemDisplayManager.Instance.gameObject.SetActive(true);
     }
 
     private void SpawnProxyBodies(CelestialBody focus)
@@ -81,25 +84,25 @@ public class ViewManager : MonoBehaviour
         {
             GameObject proxy = new GameObject($"{body.name} (Proxy)");
             Planet p = proxy.AddComponent<Planet>();
-            p.InitializeFromData(body, body.systemViewData, systemGenerator.terrainMaterial, systemGenerator.politicalMaterial);
+            p.InitializeFromData(body, body.systemViewData, SystemDisplayManager.Instance.terrainMaterial, SystemDisplayManager.Instance.politicalMaterial);
             proxyBodies.Add((proxy, body));
         }
     }
 
     private void UpdateProxyBodies(double time)
     {
-        Vector3d focusSysPos = systemGenerator.CalculateSystemViewPosition(currentFocusedBody, time);
-        float focusSysRadius = systemGenerator.CalculateSystemViewRadius(currentFocusedBody);
+        Vector3 focusSysPos = SystemDisplayManager.Instance.CalculateSystemViewPosition(currentFocusedBody, time).ToVector3();
+        float focusSysRadius = SystemDisplayManager.Instance.CalculateSystemViewRadius(currentFocusedBody);
 
         float scaleRatio = localViewUnityRadius / focusSysRadius;
 
         foreach (var proxy in proxyBodies)
         {
-            Vector3d proxySysPos = systemGenerator.CalculateSystemViewPosition(proxy.body, time);
-            float proxySysRadius = systemGenerator.CalculateSystemViewRadius(proxy.body);
+            Vector3 proxySysPos = SystemDisplayManager.Instance.CalculateSystemViewPosition(proxy.body, time).ToVector3();
+            float proxySysRadius = SystemDisplayManager.Instance.CalculateSystemViewRadius(proxy.body);
 
-            Vector3d relativeSysPos = proxySysPos - focusSysPos;
-            Vector3 localPos = (relativeSysPos * scaleRatio).ToVector3();
+            Vector3 relativeSysPos = proxySysPos - focusSysPos;
+            Vector3 localPos = relativeSysPos * scaleRatio;
             float localScale = proxySysRadius * scaleRatio * 2f;
 
             float dist = localPos.magnitude;

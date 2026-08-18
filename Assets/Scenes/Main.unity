@@ -195,8 +195,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7d7b9d8438b19f64ab24b95e765f6d30, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ViewManager
+  localViewUnityRadius: 500
   maxProxyDistance: 15000
-  systemGenerator: {fileID: 1741213814}
 --- !u!4 &106580545
 Transform:
   m_ObjectHideFlags: 0
@@ -2158,7 +2158,10 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1741213815}
-  - component: {fileID: 1741213814}
+  - component: {fileID: 1741213819}
+  - component: {fileID: 1741213818}
+  - component: {fileID: 1741213817}
+  - component: {fileID: 1741213816}
   m_Layer: 0
   m_Name: SystemGenerator
   m_TagString: Untagged
@@ -2166,35 +2169,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1741213814
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1741213813}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5bdd4d5141e678a42ad1512c4ace027b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SystemGenerator
-  starClass: {fileID: 11400000, guid: 90316b37f1fd51d4f89aa7eead6203a2, type: 2}
-  systemName: Sol
-  rockBudgetEarths: 15
-  gasBudgetEarths: 500
-  targetCellRadiusKm: 50
-  maxDataSubdivisions: 7
-  maxGiantSubdivisions: 5
-  systemViewMaxSubdivisions: 4
-  distanceScaleMode: 0
-  linearDistanceMultiplier: 0.000001
-  logDistanceMultiplier: 5
-  sizeScaleMode: 0
-  linearSizeMultiplier: 0.0005
-  logSizeMultiplier: 1.5
-  starSizeMultiplier: 0.01
-  terrainMaterial: {fileID: -876546973899608171, guid: e2b84dbfb8ada4342943762d67ca4ca4, type: 3}
-  politicalMaterial: {fileID: -876546973899608171, guid: 56b9dd9df2e9ff04aba901682311ee83, type: 3}
 --- !u!4 &1741213815
 Transform:
   m_ObjectHideFlags: 0
@@ -2210,6 +2184,71 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1741213816
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1741213813}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3c28624c34bba4e4086bbecf6dfe3a39, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SystemDisplayManager
+  distanceScaleMode: 0
+  linearDistanceMultiplier: 0.0000001
+  logDistanceMultiplier: 1
+  sizeScaleMode: 0
+  linearSizeMultiplier: 0.00005
+  logSizeMultiplier: 0.12
+  starSizeMultiplier: 0.05
+  terrainMaterial: {fileID: 2100000, guid: 5d5a58ffbb12aad48b71b005c3a57dd8, type: 2}
+  politicalMaterial: {fileID: 2100000, guid: 6ec0d1aea9011b146a4200d536ae56c7, type: 2}
+--- !u!114 &1741213817
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1741213813}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c26405fffddf2740a3def897ac5c0ad, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SystemMeshGenerator
+  systemViewMaxSubdivisions: 4
+--- !u!114 &1741213818
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1741213813}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68d1d78fc9031de4ca33534a857ddc46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SystemDataGenerator
+  starClass: {fileID: 11400000, guid: 90316b37f1fd51d4f89aa7eead6203a2, type: 2}
+  systemName: Sol
+  rockBudgetEarths: 15
+  gasBudgetEarths: 500
+  targetCellRadiusKm: 50
+  maxDataSubdivisions: 7
+  maxGiantSubdivisions: 5
+--- !u!114 &1741213819
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1741213813}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5ed051210e3825c47bedc618a7006799, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SolarSystemBootstrapper
 --- !u!1 &1873122170
 GameObject:
   m_ObjectHideFlags: 0

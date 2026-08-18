@@ -3,7 +3,7 @@ using UnityEngine;
 
 public static class PlanetGenerator
 {
-    public static PlanetMeshData GenerateData(float radiusKm, int subdivisions, BodyType bodyType)
+    public static PlanetMeshData GenerateData(float radiusKm, int subdivisions, BodyType bodyType, float noiseScale, float noiseOffset, float waterLevel)
     {
         PlanetMeshData data = new PlanetMeshData();
 
@@ -28,10 +28,6 @@ public static class PlanetGenerator
 
         data.cells = new Cell[icoVerts.Count];
         data.visualDataArray = new CellVisualData[icoVerts.Count];
-
-        float noiseScale = Random.Range(1.5f, 3f);
-        float noiseOffset = Random.Range(0f, 10000f);
-        float waterLevel = (bodyType == BodyType.RockyPlanet && Random.value > 0.5f) ? Random.Range(8000f, 15000f) : 0f;
 
         for (int i = 0; i < icoVerts.Count; i++)
         {

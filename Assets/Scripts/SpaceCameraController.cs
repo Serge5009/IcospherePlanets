@@ -107,8 +107,7 @@ public class SpaceCameraController : MonoBehaviour
 
         if (currentState == CameraState.SystemView)
         {
-            if (focusedBody.visualObject != null)
-                targetFocus = focusedBody.visualObject.transform.position;
+            targetFocus = SystemDisplayManager.Instance.CalculateSystemViewPosition(focusedBody, TimeManager.Instance.totalSeconds).ToVector3();
         }
 
         if (Vector3.Distance(currentFocusPoint, targetFocus) < 0.5f)
@@ -125,7 +124,7 @@ public class SpaceCameraController : MonoBehaviour
     {
         if (focusedBody == null || focusedBody.visualObject == null) return;
 
-        float systemRadius = focusedBody.visualObject.transform.localScale.x / 2f;
+        float systemRadius = SystemDisplayManager.Instance.CalculateSystemViewRadius(focusedBody);
         float localRadius = ViewManager.Instance.localViewUnityRadius;
         float scaleRatio = localRadius / systemRadius;
 
@@ -135,6 +134,8 @@ public class SpaceCameraController : MonoBehaviour
 
             if (targetDistance < thresholdDistance)
             {
+                if (!focusedBody.isHighResReady) return;
+
                 currentState = CameraState.LocalView;
 
                 targetDistance *= scaleRatio;
@@ -156,7 +157,8 @@ public class SpaceCameraController : MonoBehaviour
                 targetDistance /= scaleRatio;
                 currentDistance /= scaleRatio;
                 distanceVelocity /= scaleRatio;
-                currentFocusPoint = focusedBody.visualObject.transform.position;
+
+                currentFocusPoint = SystemDisplayManager.Instance.CalculateSystemViewPosition(focusedBody, TimeManager.Instance.totalSeconds).ToVector3();
 
                 ViewManager.Instance.TransitionToSystemView();
             }

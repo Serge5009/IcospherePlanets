@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class SystemGenerator : MonoBehaviour
+public class SystemDataGenerator : MonoBehaviour
 {
-    public enum ScaleMode { Linear, Logarithmic }
+    public static SystemDataGenerator Instance { get; private set; }
 
     [Header("Generation Settings")]
     public StarClassTemplate starClass;
@@ -16,76 +16,18 @@ public class SystemGenerator : MonoBehaviour
     public float targetCellRadiusKm = 50f;
     public int maxDataSubdivisions = 7;
     public int maxGiantSubdivisions = 5;
-    public int systemViewMaxSubdivisions = 4;
 
-    [Header("Distance Scaling (System View)")]
-    public ScaleMode distanceScaleMode = ScaleMode.Linear;
-    public float linearDistanceMultiplier = 0.0000001f;
-    public float logDistanceMultiplier = 5f;
-
-    [Header("Planet Size Scaling (System View)")]
-    public ScaleMode sizeScaleMode = ScaleMode.Linear;
-    public float linearSizeMultiplier = 0.0001f;
-    public float logSizeMultiplier = 1.5f;
-    public float starSizeMultiplier = 0.05f;
-
-    [Header("Visuals")]
-    public Material terrainMaterial;
-    public Material politicalMaterial;
-
-    private CelestialBody star;
-    private List<CelestialBody> allBodies = new List<CelestialBody>();
+    public List<CelestialBody> allBodies { get; private set; } = new List<CelestialBody>();
     private List<CelestialBody> mainPlanets = new List<CelestialBody>();
+    public CelestialBody star { get; private set; }
 
-    private void Start()
+    private void Awake()
     {
-        GenerateSystem();
+        if (Instance != null && Instance != this) Destroy(gameObject);
+        else Instance = this;
     }
 
-    private void Update()
-    {
-        if (TimeManager.Instance == null || allBodies.Count == 0) return;
-        double currentTime = TimeManager.Instance.totalSeconds;
-        foreach (var body in allBodies)
-        {
-            if (body.visualObject != null)
-            {
-                Vector3d pos = CalculateSystemViewPosition(body, currentTime);
-                float scale = CalculateSystemViewRadius(body) * 2f;
-
-                body.visualObject.transform.position = pos.ToVector3();
-                body.visualObject.transform.localScale = new Vector3(scale, scale, scale);
-            }
-        }
-    }
-
-    public Vector3d CalculateSystemViewPosition(CelestialBody body, double time)
-    {
-        Vector3d absolutePos = body.GetAbsolutePosition(time);
-        double distKm = absolutePos.magnitude;
-        if (distKm == 0) return new Vector3d(0, 0, 0);
-
-        double scaledDist = distanceScaleMode == ScaleMode.Linear
-            ? distKm * linearDistanceMultiplier
-            : Math.Log10(distKm + 1) * logDistanceMultiplier;
-
-        return absolutePos.normalized * scaledDist;
-    }
-
-    public float CalculateSystemViewRadius(CelestialBody body)
-    {
-        double radiusKm = body.radiusKm;
-        double scaledRadius = sizeScaleMode == ScaleMode.Linear
-            ? radiusKm * linearSizeMultiplier
-            : Math.Log10(radiusKm + 1) * logSizeMultiplier;
-
-        float finalScale = (float)(scaledRadius * 2);
-        if (body.bodyType == BodyType.Star) finalScale *= starSizeMultiplier;
-
-        return finalScale / 2f;
-    }
-
-    public void GenerateSystem()
+    public void GenerateData()
     {
         allBodies.Clear();
         mainPlanets.Clear();
@@ -95,6 +37,7 @@ public class SystemGenerator : MonoBehaviour
         star = new CelestialBody(systemName + " Prime", BodyType.Star, starMassKg, 696340);
 
         star.dataSubdivisions = CalculateSubdivisions(star.radiusKm, maxGiantSubdivisions);
+        SetThreadSafeParams(star);
         allBodies.Add(star);
 
         double luminosity = AstroMath.CalculateLuminosity(starMass);
@@ -105,14 +48,13 @@ public class SystemGenerator : MonoBehaviour
         GenerateMoons();
         GenerateBelts(frostLine);
         GenerateComets();
+    }
 
-        foreach (var body in allBodies)
-        {
-            int renderSubs = Mathf.Min(body.dataSubdivisions, systemViewMaxSubdivisions);
-            body.systemViewData = PlanetGenerator.GenerateData((float)body.radiusKm, renderSubs, body.bodyType);
-            body.localViewData = PlanetGenerator.GenerateData((float)body.radiusKm, body.dataSubdivisions, body.bodyType);
-            SpawnVisualHexSphere(body);
-        }
+    private void SetThreadSafeParams(CelestialBody body)
+    {
+        body.noiseScale = UnityEngine.Random.Range(1.5f, 3f);
+        body.noiseOffset = UnityEngine.Random.Range(0f, 10000f);
+        body.waterLevel = (body.bodyType == BodyType.RockyPlanet && UnityEngine.Random.value > 0.5f) ? UnityEngine.Random.Range(8000f, 15000f) : 0f;
     }
 
     private int CalculateSubdivisions(double radiusKm, int hardCap)
@@ -183,6 +125,7 @@ public class SystemGenerator : MonoBehaviour
 
                 int cap = (type == BodyType.GasGiant || type == BodyType.IceGiant) ? maxGiantSubdivisions : maxDataSubdivisions;
                 planet.dataSubdivisions = CalculateSubdivisions(planet.radiusKm, cap);
+                SetThreadSafeParams(planet);
 
                 OrbitalParameters parameters = new OrbitalParameters
                 {
@@ -220,6 +163,7 @@ public class SystemGenerator : MonoBehaviour
                 CelestialBody moon = new CelestialBody($"{planet.name}{((char)('a' + i))}", BodyType.Moon, moonMass, moonRadius);
                 moon.isTidallyLocked = true;
                 moon.dataSubdivisions = CalculateSubdivisions(moon.radiusKm, maxDataSubdivisions);
+                SetThreadSafeParams(moon);
 
                 double minDistance = planet.radiusKm * 3;
                 double maxDistance = hillSphereKm * 0.4;
@@ -258,6 +202,7 @@ public class SystemGenerator : MonoBehaviour
             double mass = AstroMath.EARTH_MASS_KG * 0.0001;
             CelestialBody asteroid = new CelestialBody($"{prefix} Obj-{i}", BodyType.Asteroid, mass, 500);
             asteroid.dataSubdivisions = CalculateSubdivisions(asteroid.radiusKm, maxDataSubdivisions);
+            SetThreadSafeParams(asteroid);
 
             OrbitalParameters parameters = new OrbitalParameters
             {
@@ -281,6 +226,7 @@ public class SystemGenerator : MonoBehaviour
         {
             CelestialBody comet = new CelestialBody($"Comet {i + 1}", BodyType.Comet, AstroMath.EARTH_MASS_KG * 0.00001, 50);
             comet.dataSubdivisions = CalculateSubdivisions(comet.radiusKm, maxDataSubdivisions);
+            SetThreadSafeParams(comet);
 
             OrbitalParameters parameters = new OrbitalParameters
             {
@@ -295,22 +241,5 @@ public class SystemGenerator : MonoBehaviour
             star.AddOrbitingBody(comet, parameters);
             allBodies.Add(comet);
         }
-    }
-
-    private void SpawnVisualHexSphere(CelestialBody body)
-    {
-        GameObject planetObj = new GameObject(body.name);
-        planetObj.transform.SetParent(this.transform);
-
-        Planet planet = planetObj.AddComponent<Planet>();
-        planet.InitializeFromData(body, body.systemViewData, terrainMaterial, politicalMaterial);
-
-        SphereCollider collider = planetObj.AddComponent<SphereCollider>();
-        collider.radius = 1f;
-
-        CelestialBodyLink link = planetObj.AddComponent<CelestialBodyLink>();
-        link.body = body;
-
-        body.visualObject = planetObj;
     }
 }

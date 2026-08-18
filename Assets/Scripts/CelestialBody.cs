@@ -23,11 +23,15 @@ public class CelestialBody
     public List<OrbitNode> virtualOrbits = new List<OrbitNode>();
 
     public GameObject visualObject;
-
     public int dataSubdivisions;
 
     public PlanetMeshData systemViewData;
     public PlanetMeshData localViewData;
+
+    public float noiseScale;
+    public float noiseOffset;
+    public float waterLevel;
+    public bool isHighResReady = false;
 
     private double lastCalculatedTime = -1;
     private Vector3d cachedAbsolutePosition;
