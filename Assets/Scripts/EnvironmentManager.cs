@@ -4,7 +4,13 @@ public class EnvironmentManager : MonoBehaviour
 {
     public static EnvironmentManager Instance { get; private set; }
 
-    [Header("Biomes")]
+    [Header("Special Biomes")]
+    public BiomeTemplate starBiome;
+    public BiomeTemplate gasGiantBiome;
+    public BiomeTemplate iceGiantBiome;
+    public BiomeTemplate barrenRockBiome;
+
+    [Header("Terran Biomes (Earth-like)")]
     public BiomeTemplate oceanBiome;
     public BiomeTemplate[] landBiomes;
 
@@ -18,8 +24,20 @@ public class EnvironmentManager : MonoBehaviour
         Instance = this;
     }
 
-    public BiomeTemplate EvaluateBiome(float altitude, float waterLevel)
+    public BiomeTemplate EvaluateBiome(float altitude, float waterLevel, BodyType bodyType)
     {
+        switch (bodyType)
+        {
+            case BodyType.Star: return starBiome;
+            case BodyType.GasGiant: return gasGiantBiome;
+            case BodyType.IceGiant: return iceGiantBiome;
+            case BodyType.Asteroid:
+            case BodyType.Comet:
+            case BodyType.Moon:
+            case BodyType.DwarfPlanet:
+                return barrenRockBiome;
+        }
+
         if (altitude <= waterLevel)
         {
             return oceanBiome;

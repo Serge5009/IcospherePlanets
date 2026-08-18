@@ -195,6 +195,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4c63d89008110024694675c46f00daf8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnvironmentManager
+  starBiome: {fileID: 11400000, guid: b672b4747e92adb42a848d8892e64ad3, type: 2}
+  gasGiantBiome: {fileID: 11400000, guid: e186e2f134dc236468bcd68185324532, type: 2}
+  iceGiantBiome: {fileID: 11400000, guid: def0ff897ef8d2f4c97ec7473f5eab6d, type: 2}
+  barrenRockBiome: {fileID: 11400000, guid: 7b81fc60192503c44976a803c1c4c07f, type: 2}
   oceanBiome: {fileID: 11400000, guid: 0364e4e7373850d42b8ea0b6f56cd9a0, type: 2}
   landBiomes:
   - {fileID: 11400000, guid: d0a3552eb33b0d140be019f9ae4a9e07, type: 2}
@@ -2086,6 +2090,11 @@ MonoBehaviour:
   systemName: Sol
   rockBudgetEarths: 15
   gasBudgetEarths: 500
+  rockySubdivisions: 5
+  gasGiantSubdivisions: 4
+  moonSubdivisions: 3
+  starSubdivisions: 4
+  asteroidSubdivisions: 2
   distanceScaleMode: 0
   linearDistanceMultiplier: 0.000001
   logDistanceMultiplier: 5
@@ -2093,8 +2102,8 @@ MonoBehaviour:
   linearSizeMultiplier: 0.0005
   logSizeMultiplier: 1.5
   starSizeMultiplier: 0.05
-  defaultPlanetMaterial: {fileID: 2100000, guid: 7358c8dde9e49c84782aa6a5831929c3, type: 2}
-  defaultAsteroidMaterial: {fileID: 2100000, guid: 0d7c15359202d724089e49926718cff7, type: 2}
+  terrainMaterial: {fileID: -876546973899608171, guid: e2b84dbfb8ada4342943762d67ca4ca4, type: 3}
+  politicalMaterial: {fileID: -876546973899608171, guid: 56b9dd9df2e9ff04aba901682311ee83, type: 3}
 --- !u!4 &1741213815
 Transform:
   m_ObjectHideFlags: 0
