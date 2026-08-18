@@ -1,34 +1,64 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class SystemGenerator : MonoBehaviour
 {
+    public enum ScaleMode { Linear, Logarithmic }
+
     [Header("Generation Settings")]
     public StarClassTemplate starClass;
     public string systemName = "Sol";
-
-    [Tooltip("Total rock/metal available in Earth Masses")]
     public float rockBudgetEarths = 15f;
-
-    [Tooltip("Total gas/ice available in Earth Masses")]
     public float gasBudgetEarths = 500f;
 
+    [Header("Distance Scaling (System View)")]
+    public ScaleMode distanceScaleMode = ScaleMode.Linear;
+    [Tooltip("Multiplier if using Linear Distance (e.g., 1e-7)")]
+    public float linearDistanceMultiplier = 0.0000001f;
+    [Tooltip("Multiplier if using Logarithmic Distance (e.g., 5)")]
+    public float logDistanceMultiplier = 5f;
+
+    [Header("Planet Size Scaling (System View)")]
+    public ScaleMode sizeScaleMode = ScaleMode.Logarithmic;
+    [Tooltip("Multiplier if using Linear Size (e.g., 0.0001)")]
+    public float linearSizeMultiplier = 0.0001f;
+    [Tooltip("Multiplier if using Logarithmic Size (e.g., 1.5)")]
+    public float logSizeMultiplier = 1.5f;
+
+    [Header("Visuals")]
+    public Material defaultPlanetMaterial;
+
     private CelestialBody star;
-    private List<CelestialBody> planets = new List<CelestialBody>();
+    private List<CelestialBody> allBodies = new List<CelestialBody>();
 
     private void Start()
     {
         GenerateSystem();
     }
 
+    private void Update()
+    {
+        if (TimeManager.Instance == null || allBodies.Count == 0) return;
+
+        double currentTime = TimeManager.Instance.totalSeconds;
+
+        foreach (var body in allBodies)
+        {
+            UpdateVisuals(body, currentTime);
+        }
+    }
+
     public void GenerateSystem()
     {
-        planets.Clear();
+        allBodies.Clear();
 
-        float starMass = Random.Range(starClass.minSolarMass, starClass.maxSolarMass);
+        float starMass = UnityEngine.Random.Range(starClass.minSolarMass, starClass.maxSolarMass);
         double starMassKg = starMass * AstroMath.SOLAR_MASS_KG;
 
         star = new CelestialBody(systemName + " Prime", BodyType.Star, starMassKg, 696340);
+        SpawnVisualSphere(star);
+        allBodies.Add(star);
 
         double luminosity = AstroMath.CalculateLuminosity(starMass);
         (double habInner, double habOuter) = AstroMath.CalculateHabitableZone(luminosity);
@@ -46,85 +76,118 @@ public class SystemGenerator : MonoBehaviour
 
             double planetMassEarths = 0;
             BodyType type = BodyType.DwarfPlanet;
+            double radiusKm = 5000;
 
             if (isInsideFrostLine)
             {
                 if (currentRockBudget > 0.5)
                 {
-                    planetMassEarths = Random.Range(0.1f, Mathf.Min(3f, (float)currentRockBudget));
+                    planetMassEarths = UnityEngine.Random.Range(0.1f, Mathf.Min(3f, (float)currentRockBudget));
                     currentRockBudget -= planetMassEarths;
                     type = planetMassEarths > 0.1 ? BodyType.RockyPlanet : BodyType.DwarfPlanet;
+                    radiusKm = 6371 * Math.Pow(planetMassEarths, 0.33);
                 }
             }
             else
             {
                 if (currentGasBudget > 10)
                 {
-                    planetMassEarths = Random.Range(10f, Mathf.Min(300f, (float)currentGasBudget));
+                    planetMassEarths = UnityEngine.Random.Range(10f, Mathf.Min(300f, (float)currentGasBudget));
                     currentGasBudget -= planetMassEarths;
 
-                    double coreMass = Random.Range(1f, 5f);
+                    double coreMass = UnityEngine.Random.Range(1f, 5f);
                     currentRockBudget -= coreMass;
                     planetMassEarths += coreMass;
 
                     type = planetMassEarths > 50 ? BodyType.GasGiant : BodyType.IceGiant;
+                    radiusKm = 69911 * Math.Pow(planetMassEarths / 317.8, 0.33);
                 }
                 else if (currentRockBudget > 0.1)
                 {
-                    planetMassEarths = Random.Range(0.01f, 0.5f);
+                    planetMassEarths = UnityEngine.Random.Range(0.01f, 0.5f);
                     currentRockBudget -= planetMassEarths;
                     type = BodyType.DwarfPlanet;
+                    radiusKm = 2000;
                 }
             }
 
             if (planetMassEarths > 0)
             {
                 double massKg = planetMassEarths * AstroMath.EARTH_MASS_KG;
-                CelestialBody planet = new CelestialBody($"{systemName} {i + 1}", type, massKg, 5000, star);
+                CelestialBody planet = new CelestialBody($"{systemName} {i + 1}", type, massKg, radiusKm);
 
-                planet.orbit = new OrbitalParameters { semiMajorAxis = distanceAU * AstroMath.AU_TO_KM };
+                OrbitalParameters parameters = new OrbitalParameters
+                {
+                    semiMajorAxis = distanceAU * AstroMath.AU_TO_KM,
+                    eccentricity = UnityEngine.Random.Range(0.0f, 0.06f),
+                    inclination = UnityEngine.Random.Range(-3f, 3f) * Mathf.Deg2Rad,
+                    longitudeOfAscendingNode = UnityEngine.Random.Range(0f, 2f * Mathf.PI),
+                    argumentOfPeriapsis = UnityEngine.Random.Range(0f, 2f * Mathf.PI),
+                    meanAnomalyAtEpoch = UnityEngine.Random.Range(0f, 2f * Mathf.PI)
+                };
 
-                planets.Add(planet);
+                star.AddOrbitingBody(planet, parameters);
+                SpawnVisualSphere(planet);
+                allBodies.Add(planet);
             }
         }
-
-        PrintSystemReport(starMass, luminosity, habInner, habOuter, frostLine);
     }
 
     private List<double> GenerateOrbitalDistances(double habInner)
     {
         List<double> distances = new List<double>();
-
-        double currentDistance = Random.Range(0.2f, (float)habInner);
-
-        int planetCount = Random.Range(5, 11);
+        double currentDistance = UnityEngine.Random.Range(0.2f, (float)habInner);
+        int planetCount = UnityEngine.Random.Range(5, 11);
 
         for (int i = 0; i < planetCount; i++)
         {
             distances.Add(currentDistance);
-            currentDistance *= Random.Range(1.4f, 2.0f);
+            currentDistance *= UnityEngine.Random.Range(1.4f, 2.0f);
         }
-
         return distances;
     }
 
-    private void PrintSystemReport(float starMass, double luminosity, double habInner, double habOuter, double frostLine)
+    private void SpawnVisualSphere(CelestialBody body)
     {
-        Debug.Log($"<color=yellow>=== SYSTEM GENERATED: {systemName} ===</color>");
-        Debug.Log($"Star: {starClass.className} | Mass: {starMass:F2} M_sun | Luminosity: {luminosity:F2} L_sun");
-        Debug.Log($"Habitable Zone: {habInner:F2} AU to {habOuter:F2} AU | Frost Line: {frostLine:F2} AU");
-        Debug.Log("--------------------------------------------------");
+        GameObject sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        sphere.name = body.name;
+        sphere.transform.SetParent(this.transform);
 
-        foreach (var planet in planets)
+        if (defaultPlanetMaterial != null)
         {
-            double distanceAU = planet.orbit.semiMajorAxis / AstroMath.AU_TO_KM;
-
-            string zone = "";
-            if (distanceAU >= habInner && distanceAU <= habOuter) zone = "<color=green>[HABITABLE ZONE]</color>";
-            else if (distanceAU > frostLine) zone = "<color=cyan>[FROST ZONE]</color>";
-            else zone = "<color=red>[HOT ZONE]</color>";
-
-            Debug.Log($"Planet: {planet.name} | Type: {planet.bodyType} | Mass: {planet.massEarths:F2} M_earth | Distance: {distanceAU:F2} AU {zone}");
+            sphere.GetComponent<MeshRenderer>().sharedMaterial = defaultPlanetMaterial;
         }
+
+        body.visualObject = sphere;
+    }
+
+    private void UpdateVisuals(CelestialBody body, double time)
+    {
+        if (body.visualObject == null) return;
+
+        Vector3d absolutePos = body.GetAbsolutePosition(time);
+        double distKm = absolutePos.magnitude;
+
+        if (distKm > 0)
+        {
+            double scaledDist = distanceScaleMode == ScaleMode.Linear
+                ? distKm * linearDistanceMultiplier
+                : Math.Log10(distKm + 1) * logDistanceMultiplier;
+
+            Vector3d scaledPos = absolutePos.normalized * scaledDist;
+            body.visualObject.transform.position = scaledPos.ToVector3();
+        }
+        else
+        {
+            body.visualObject.transform.position = Vector3.zero;
+        }
+
+        double radiusKm = body.radiusKm;
+        double scaledRadius = sizeScaleMode == ScaleMode.Linear
+            ? radiusKm * linearSizeMultiplier
+            : Math.Log10(radiusKm + 1) * logSizeMultiplier;
+
+        float finalScale = (float)(scaledRadius * 2);
+        body.visualObject.transform.localScale = new Vector3(finalScale, finalScale, finalScale);
     }
 }

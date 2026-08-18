@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEngine;
 
 public enum BodyType
 {
@@ -24,6 +25,8 @@ public class CelestialBody
 
     public List<CelestialBody> orbitingBodies = new List<CelestialBody>();
     public List<OrbitNode> virtualOrbits = new List<OrbitNode>();
+
+    public GameObject visualObject;
 
     private double lastCalculatedTime = -1;
     private Vector3d cachedAbsolutePosition;

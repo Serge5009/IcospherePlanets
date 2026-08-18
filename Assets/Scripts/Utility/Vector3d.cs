@@ -17,5 +17,8 @@ public struct Vector3d
     public static Vector3d operator *(Vector3d a, double d) => new Vector3d(a.x * d, a.y * d, a.z * d);
     public static Vector3d operator /(Vector3d a, double d) => new Vector3d(a.x / d, a.y / d, a.z / d);
 
+    public double magnitude => Math.Sqrt(x * x + y * y + z * z);
+    public Vector3d normalized => magnitude > 0 ? this / magnitude : new Vector3d(0, 0, 0);
+
     public UnityEngine.Vector3 ToVector3() => new UnityEngine.Vector3((float)x, (float)y, (float)z);
 }

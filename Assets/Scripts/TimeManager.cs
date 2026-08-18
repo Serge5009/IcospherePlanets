@@ -6,11 +6,13 @@ public class TimeManager : MonoBehaviour
     public static TimeManager Instance { get; private set; }
 
     [Header("Time Settings")]
-    [Tooltip("How many in-game seconds pass per real-life second")]
-    public float timeScale = 86400f;
+    [Tooltip("Base speed: How many in-game seconds pass per real-life second at 1x speed")]
+    public float baseTimeScale = 86400f;
+
+    [Tooltip("Current speed multiplier (0 = Paused, 1 = Normal, 10 = Fast)")]
+    public float currentMultiplier = 1f;
 
     [Header("Current Time")]
-    [Tooltip("Total continuous seconds since the start of the simulation")]
     public double totalSeconds = 0;
 
     private double secondsSinceLastDailyTick = 0;
@@ -34,27 +36,34 @@ public class TimeManager : MonoBehaviour
 
     private void Update()
     {
-        double deltaSeconds = Time.deltaTime * timeScale;
+        if (currentMultiplier <= 0f) return;
+
+        double deltaSeconds = Time.deltaTime * baseTimeScale * currentMultiplier;
         totalSeconds += deltaSeconds;
 
         secondsSinceLastDailyTick += deltaSeconds;
         secondsSinceLastMonthlyTick += deltaSeconds;
 
-        if (secondsSinceLastDailyTick >= SECONDS_IN_DAY)
+        while (secondsSinceLastDailyTick >= SECONDS_IN_DAY)
         {
             secondsSinceLastDailyTick -= SECONDS_IN_DAY;
             OnDailyTick?.Invoke();
         }
 
-        if (secondsSinceLastMonthlyTick >= SECONDS_IN_MONTH)
+        while (secondsSinceLastMonthlyTick >= SECONDS_IN_MONTH)
         {
             secondsSinceLastMonthlyTick -= SECONDS_IN_MONTH;
             OnMonthlyTick?.Invoke();
         }
     }
 
-    public void SetTimeScale(float newScale)
+    public void SetSpeedMultiplier(float multiplier)
     {
-        timeScale = newScale;
+        currentMultiplier = multiplier;
+    }
+
+    public void Pause()
+    {
+        currentMultiplier = 0f;
     }
 }
