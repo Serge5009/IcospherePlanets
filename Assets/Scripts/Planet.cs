@@ -1,84 +1,52 @@
 using UnityEngine;
 
-public struct CellVisualData
-{
-    public Vector4 terrainColor;
-    public Vector4 politicalColor;
-    public int isHovered;
-}
-
 public class Planet : MonoBehaviour
 {
-    [Header("Logical Data")]
-    public string planetName;
-    public BodyType bodyType;
-    public float radiusKm;
-
-    [Header("Environment")]
-    [Range(0, 22000)]
-    public float waterLevel = 0f;
-
-    [Header("Visual Data")]
-    public float unityRadius = 1000f;
-
-    public Cell[] cells;
+    public CelestialBody bodyData;
+    public PlanetMeshData meshData;
 
     private ComputeBuffer visualBuffer;
-    private CellVisualData[] visualDataArray;
-
     public MeshRenderer terrainRenderer;
     public MeshRenderer politicalRenderer;
 
-    private float noiseScale;
-    private float noiseOffset;
-
-    public void InitializeVisuals()
+    public void InitializeFromData(CelestialBody body, PlanetMeshData data, Material terrainMat, Material polMat)
     {
-        visualDataArray = new CellVisualData[cells.Length];
+        this.bodyData = body;
+        this.meshData = data;
 
-        noiseScale = Random.Range(1.5f, 3f);
-        noiseOffset = Random.Range(0f, 10000f);
+        Mesh mesh = new Mesh();
+        mesh.name = body.name + " Mesh";
+        mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+        mesh.vertices = data.vertices;
+        mesh.triangles = data.triangles;
+        mesh.uv2 = data.uv2;
+        mesh.uv3 = data.uv3;
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
 
-        if (bodyType == BodyType.RockyPlanet)
-        {
-            waterLevel = Random.value > 0.5f ? Random.Range(8000f, 15000f) : 0f;
-        }
-        else
-        {
-            waterLevel = 0f;
-        }
+        MeshFilter filter = gameObject.AddComponent<MeshFilter>();
+        filter.sharedMesh = mesh;
+        terrainRenderer = gameObject.AddComponent<MeshRenderer>();
+        terrainRenderer.sharedMaterial = terrainMat;
 
-        for (int i = 0; i < cells.Length; i++)
-        {
-            Vector3 normalizedPos = cells[i].localPosition.normalized;
-            float noiseVal = Noise3D.Evaluate(normalizedPos, noiseScale, noiseOffset);
+        GameObject polObj = new GameObject("Political Overlay");
+        polObj.transform.SetParent(transform);
+        polObj.transform.localPosition = Vector3.zero;
+        polObj.transform.localScale = Vector3.one * 1.002f;
 
-            cells[i].altitude = noiseVal * noiseVal * 22000f;
+        MeshFilter polFilter = polObj.AddComponent<MeshFilter>();
+        polFilter.sharedMesh = mesh;
+        politicalRenderer = polObj.AddComponent<MeshRenderer>();
+        politicalRenderer.sharedMaterial = polMat;
 
-            cells[i].ownerId = 0;
-            visualDataArray[i].politicalColor = GeopoliticsManager.Instance.GetNation(0).mapColor;
-            visualDataArray[i].isHovered = 0;
-        }
-
-        UpdateBiomes();
-
-        visualBuffer = new ComputeBuffer(cells.Length, 36);
-        visualBuffer.SetData(visualDataArray);
+        visualBuffer = new ComputeBuffer(data.visualDataArray.Length, 36);
+        visualBuffer.SetData(data.visualDataArray);
 
         MaterialPropertyBlock propBlock = new MaterialPropertyBlock();
         propBlock.SetBuffer("_CellVisualData", visualBuffer);
 
-        if (terrainRenderer != null) terrainRenderer.SetPropertyBlock(propBlock);
-        if (politicalRenderer != null) politicalRenderer.SetPropertyBlock(propBlock);
-    }
-
-    private void UpdateBiomes()
-    {
-        for (int i = 0; i < cells.Length; i++)
-        {
-            cells[i].currentBiome = EnvironmentManager.Instance.EvaluateBiome(cells[i].altitude, waterLevel, bodyType);
-            visualDataArray[i].terrainColor = cells[i].currentBiome.biomeColor;
-        }
+        terrainRenderer.SetPropertyBlock(propBlock);
+        politicalRenderer.SetPropertyBlock(propBlock);
     }
 
     private void OnDestroy()

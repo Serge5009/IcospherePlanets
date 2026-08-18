@@ -1,261 +1,164 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Rendering;
 
-[RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
-public class PlanetGenerator : MonoBehaviour
+public static class PlanetGenerator
 {
-    private List<Vector3> icoVertices;
-    private List<int> icoTriangles;
-    private Dictionary<long, int> midpointCache;
-
-    private List<Vector3> visualVertices;
-    private List<int> visualTriangles;
-
-    private List<Vector2> visualUV2;
-
-    private List<Vector2> visualUV3;
-
-    public void Generate(Planet planet, int subdivisions, Material terrainMat, Material politicalMat)
+    public static PlanetMeshData GenerateData(float radiusKm, int subdivisions, BodyType bodyType)
     {
-        icoVertices = new List<Vector3>();
-        icoTriangles = new List<int>();
-        midpointCache = new Dictionary<long, int>();
+        PlanetMeshData data = new PlanetMeshData();
 
-        visualVertices = new List<Vector3>();
-        visualTriangles = new List<int>();
-        visualUV2 = new List<Vector2>();
-        visualUV3 = new List<Vector2>();
+        List<Vector3> icoVerts = new List<Vector3>();
+        List<int> icoTris = new List<int>();
+        Dictionary<long, int> midpointCache = new Dictionary<long, int>();
 
-        CreateIcosahedron(planet.unityRadius);
+        List<Vector3> visualVerts = new List<Vector3>();
+        List<int> visualTris = new List<int>();
+        List<Vector2> visualUV2 = new List<Vector2>();
+        List<Vector2> visualUV3 = new List<Vector2>();
 
-        for (int i = 0; i < subdivisions; i++)
+        CreateIcosahedron(1f, icoVerts, icoTris);
+        for (int i = 0; i < subdivisions; i++) Subdivide(1f, icoVerts, icoTris, midpointCache);
+
+        GenerateDualMesh(1f, icoVerts, icoTris, visualVerts, visualTris, visualUV2, visualUV3);
+
+        data.vertices = visualVerts.ToArray();
+        data.triangles = visualTris.ToArray();
+        data.uv2 = visualUV2.ToArray();
+        data.uv3 = visualUV3.ToArray();
+
+        data.cells = new Cell[icoVerts.Count];
+        data.visualDataArray = new CellVisualData[icoVerts.Count];
+
+        float noiseScale = Random.Range(1.5f, 3f);
+        float noiseOffset = Random.Range(0f, 10000f);
+        float waterLevel = (bodyType == BodyType.RockyPlanet && Random.value > 0.5f) ? Random.Range(8000f, 15000f) : 0f;
+
+        for (int i = 0; i < icoVerts.Count; i++)
         {
-            Subdivide(planet.unityRadius);
+            data.cells[i].id = i;
+            data.cells[i].localPosition = icoVerts[i];
+
+            float noiseVal = Noise3D.Evaluate(icoVerts[i], noiseScale, noiseOffset);
+            data.cells[i].altitude = noiseVal * noiseVal * 22000f;
+            data.cells[i].ownerId = 0;
+
+            data.cells[i].currentBiome = EnvironmentManager.Instance.EvaluateBiome(data.cells[i].altitude, waterLevel, bodyType);
+
+            data.visualDataArray[i].terrainColor = data.cells[i].currentBiome.biomeColor;
+            data.visualDataArray[i].politicalColor = GeopoliticsManager.Instance.GetNation(0).mapColor;
+            data.visualDataArray[i].isHovered = 0;
         }
 
-        GenerateDualMesh(planet.unityRadius);
-
-        Mesh terrainMesh = BuildMeshObject();
-
-        MeshFilter terrainFilter = GetComponent<MeshFilter>();
-        if (terrainFilter == null) terrainFilter = gameObject.AddComponent<MeshFilter>();
-
-        planet.terrainRenderer = GetComponent<MeshRenderer>();
-        if (planet.terrainRenderer == null) planet.terrainRenderer = gameObject.AddComponent<MeshRenderer>();
-
-        terrainFilter.sharedMesh = terrainMesh;
-        planet.terrainRenderer.sharedMaterial = terrainMat;
-
-        GameObject politicalObj = new GameObject("Political Overlay");
-        politicalObj.transform.SetParent(transform);
-        politicalObj.transform.localPosition = Vector3.zero;
-
-        politicalObj.transform.localScale = Vector3.one * 1.002f;
-
-        MeshFilter politicalFilter = politicalObj.AddComponent<MeshFilter>();
-        planet.politicalRenderer = politicalObj.AddComponent<MeshRenderer>();
-
-        politicalFilter.sharedMesh = terrainMesh;
-        planet.politicalRenderer.sharedMaterial = politicalMat;
-
-        InitializeCellData(planet);
-        planet.InitializeVisuals();
+        return data;
     }
 
-    private void CreateIcosahedron(float radius)
+    private static void CreateIcosahedron(float radius, List<Vector3> verts, List<int> tris)
     {
         float t = (1f + Mathf.Sqrt(5f)) / 2f;
+        verts.Add(new Vector3(-1, t, 0).normalized * radius); verts.Add(new Vector3(1, t, 0).normalized * radius);
+        verts.Add(new Vector3(-1, -t, 0).normalized * radius); verts.Add(new Vector3(1, -t, 0).normalized * radius);
+        verts.Add(new Vector3(0, -1, t).normalized * radius); verts.Add(new Vector3(0, 1, t).normalized * radius);
+        verts.Add(new Vector3(0, -1, -t).normalized * radius); verts.Add(new Vector3(0, 1, -t).normalized * radius);
+        verts.Add(new Vector3(t, 0, -1).normalized * radius); verts.Add(new Vector3(t, 0, 1).normalized * radius);
+        verts.Add(new Vector3(-t, 0, -1).normalized * radius); verts.Add(new Vector3(-t, 0, 1).normalized * radius);
 
-        AddIcoVertex(new Vector3(-1, t, 0), radius);
-        AddIcoVertex(new Vector3(1, t, 0), radius);
-        AddIcoVertex(new Vector3(-1, -t, 0), radius);
-        AddIcoVertex(new Vector3(1, -t, 0), radius);
-
-        AddIcoVertex(new Vector3(0, -1, t), radius);
-        AddIcoVertex(new Vector3(0, 1, t), radius);
-        AddIcoVertex(new Vector3(0, -1, -t), radius);
-        AddIcoVertex(new Vector3(0, 1, -t), radius);
-
-        AddIcoVertex(new Vector3(t, 0, -1), radius);
-        AddIcoVertex(new Vector3(t, 0, 1), radius);
-        AddIcoVertex(new Vector3(-t, 0, -1), radius);
-        AddIcoVertex(new Vector3(-t, 0, 1), radius);
-
-        AddIcoTriangle(0, 11, 5); AddIcoTriangle(0, 5, 1); AddIcoTriangle(0, 1, 7); AddIcoTriangle(0, 7, 10); AddIcoTriangle(0, 10, 11);
-        AddIcoTriangle(1, 5, 9); AddIcoTriangle(5, 11, 4); AddIcoTriangle(11, 10, 2); AddIcoTriangle(10, 7, 6); AddIcoTriangle(7, 1, 8);
-        AddIcoTriangle(3, 9, 4); AddIcoTriangle(3, 4, 2); AddIcoTriangle(3, 2, 6); AddIcoTriangle(3, 6, 8); AddIcoTriangle(3, 8, 9);
-        AddIcoTriangle(4, 9, 5); AddIcoTriangle(2, 4, 11); AddIcoTriangle(6, 2, 10); AddIcoTriangle(8, 6, 7); AddIcoTriangle(9, 8, 1);
+        int[] tData = {
+            0, 11, 5, 0, 5, 1, 0, 1, 7, 0, 7, 10, 0, 10, 11,
+            1, 5, 9, 5, 11, 4, 11, 10, 2, 10, 7, 6, 7, 1, 8,
+            3, 9, 4, 3, 4, 2, 3, 2, 6, 3, 6, 8, 3, 8, 9,
+            4, 9, 5, 2, 4, 11, 6, 2, 10, 8, 6, 7, 9, 8, 1
+        };
+        tris.AddRange(tData);
     }
 
-    private void Subdivide(float radius)
+    private static void Subdivide(float radius, List<Vector3> verts, List<int> tris, Dictionary<long, int> cache)
     {
         List<int> newTriangles = new List<int>();
-        midpointCache.Clear();
-
-        for (int i = 0; i < icoTriangles.Count; i += 3)
+        cache.Clear();
+        for (int i = 0; i < tris.Count; i += 3)
         {
-            int v1 = icoTriangles[i];
-            int v2 = icoTriangles[i + 1];
-            int v3 = icoTriangles[i + 2];
-
-            int a = GetMidpoint(v1, v2, radius);
-            int b = GetMidpoint(v2, v3, radius);
-            int c = GetMidpoint(v3, v1, radius);
-
+            int v1 = tris[i], v2 = tris[i + 1], v3 = tris[i + 2];
+            int a = GetMidpoint(v1, v2, radius, verts, cache);
+            int b = GetMidpoint(v2, v3, radius, verts, cache);
+            int c = GetMidpoint(v3, v1, radius, verts, cache);
             newTriangles.Add(v1); newTriangles.Add(a); newTriangles.Add(c);
             newTriangles.Add(v2); newTriangles.Add(b); newTriangles.Add(a);
             newTriangles.Add(v3); newTriangles.Add(c); newTriangles.Add(b);
             newTriangles.Add(a); newTriangles.Add(b); newTriangles.Add(c);
         }
-
-        icoTriangles = newTriangles;
+        tris.Clear();
+        tris.AddRange(newTriangles);
     }
 
-    private int GetMidpoint(int v1, int v2, float radius)
+    private static int GetMidpoint(int v1, int v2, float radius, List<Vector3> verts, Dictionary<long, int> cache)
     {
         bool firstIsSmaller = v1 < v2;
         long smallerIndex = firstIsSmaller ? v1 : v2;
         long greaterIndex = firstIsSmaller ? v2 : v1;
         long key = (smallerIndex << 32) + greaterIndex;
-
-        if (midpointCache.TryGetValue(key, out int midpointIndex))
-        {
-            return midpointIndex;
-        }
-
-        Vector3 midpoint = (icoVertices[v1] + icoVertices[v2]).normalized * radius;
-        int newIndex = icoVertices.Count;
-        icoVertices.Add(midpoint);
-        midpointCache.Add(key, newIndex);
-
+        if (cache.TryGetValue(key, out int midpointIndex)) return midpointIndex;
+        Vector3 midpoint = (verts[v1] + verts[v2]).normalized * radius;
+        int newIndex = verts.Count;
+        verts.Add(midpoint);
+        cache.Add(key, newIndex);
         return newIndex;
     }
 
-    private void AddIcoVertex(Vector3 vertex, float radius)
-    {
-        icoVertices.Add(vertex.normalized * radius);
-    }
-
-    private void AddIcoTriangle(int v1, int v2, int v3)
-    {
-        icoTriangles.Add(v1);
-        icoTriangles.Add(v2);
-        icoTriangles.Add(v3);
-    }
-
-    private void GenerateDualMesh(float radius)
+    private static void GenerateDualMesh(float radius, List<Vector3> icoVerts, List<int> icoTris, List<Vector3> visualVerts, List<int> visualTris, List<Vector2> visualUV2, List<Vector2> visualUV3)
     {
         List<Vector3> centroids = new List<Vector3>();
         Dictionary<int, List<int>> vertexToCentroids = new Dictionary<int, List<int>>();
-
-        for (int i = 0; i < icoVertices.Count; i++)
-        {
-            vertexToCentroids[i] = new List<int>();
-        }
+        for (int i = 0; i < icoVerts.Count; i++) vertexToCentroids[i] = new List<int>();
 
         int centroidIndex = 0;
-        for (int i = 0; i < icoTriangles.Count; i += 3)
+        for (int i = 0; i < icoTris.Count; i += 3)
         {
-            int v1 = icoTriangles[i];
-            int v2 = icoTriangles[i + 1];
-            int v3 = icoTriangles[i + 2];
-
-            Vector3 centroid = ((icoVertices[v1] + icoVertices[v2] + icoVertices[v3]) / 3f).normalized * radius;
+            int v1 = icoTris[i], v2 = icoTris[i + 1], v3 = icoTris[i + 2];
+            Vector3 centroid = ((icoVerts[v1] + icoVerts[v2] + icoVerts[v3]) / 3f).normalized * radius;
             centroids.Add(centroid);
-
-            vertexToCentroids[v1].Add(centroidIndex);
-            vertexToCentroids[v2].Add(centroidIndex);
-            vertexToCentroids[v3].Add(centroidIndex);
-
+            vertexToCentroids[v1].Add(centroidIndex); vertexToCentroids[v2].Add(centroidIndex); vertexToCentroids[v3].Add(centroidIndex);
             centroidIndex++;
         }
 
-        for (int i = 0; i < icoVertices.Count; i++)
+        for (int i = 0; i < icoVerts.Count; i++)
         {
-            Vector3 cellCenter = icoVertices[i];
+            Vector3 cellCenter = icoVerts[i];
             List<int> connectedCentroids = vertexToCentroids[i];
 
-            SortCentroidsClockwise(cellCenter, connectedCentroids, centroids);
-            CreateVisualCell(i, cellCenter, connectedCentroids, centroids);
-        }
-    }
-
-    private void SortCentroidsClockwise(Vector3 center, List<int> connectedCentroids, List<Vector3> centroids)
-    {
-        Vector3 normal = center.normalized;
-        Vector3 referenceDirection = (centroids[connectedCentroids[0]] - center).normalized;
-
-        connectedCentroids.Sort((a, b) =>
-        {
-            Vector3 dirA = (centroids[a] - center).normalized;
-            Vector3 dirB = (centroids[b] - center).normalized;
-
-            float angleA = Vector3.SignedAngle(referenceDirection, dirA, normal);
-            float angleB = Vector3.SignedAngle(referenceDirection, dirB, normal);
-
-            return angleA.CompareTo(angleB);
-        });
-    }
-
-    private void CreateVisualCell(int cellId, Vector3 center, List<int> connectedCentroids, List<Vector3> centroids)
-    {
-        float uvX = cellId % 2000;
-        float uvY = Mathf.FloorToInt(cellId / 2000f);
-        Vector2 encodedId = new Vector2(uvX, uvY);
-
-        int centerVertexIndex = visualVertices.Count;
-        visualVertices.Add(center);
-        visualUV2.Add(encodedId);
-        visualUV3.Add(new Vector2(0, 0));
-
-        int perimeterStartIndex = visualVertices.Count;
-        for (int i = 0; i < connectedCentroids.Count; i++)
-        {
-            visualVertices.Add(centroids[connectedCentroids[i]]);
-            visualUV2.Add(encodedId);
-            visualUV3.Add(new Vector2(1, 0));
-        }
-
-        int count = connectedCentroids.Count;
-        for (int i = 0; i < count; i++)
-        {
-            int nextIndex = (i + 1) % count;
-            visualTriangles.Add(centerVertexIndex);
-            visualTriangles.Add(perimeterStartIndex + i);
-            visualTriangles.Add(perimeterStartIndex + nextIndex);
-        }
-    }
-
-    private Mesh BuildMeshObject()
-    {
-        Mesh mesh = new Mesh();
-        mesh.name = "Planet Mesh";
-        mesh.indexFormat = IndexFormat.UInt32;
-
-        mesh.SetVertices(visualVertices);
-        mesh.SetTriangles(visualTriangles, 0);
-
-        mesh.SetUVs(1, visualUV2);
-        mesh.SetUVs(2, visualUV3);
-
-        mesh.RecalculateNormals();
-        mesh.RecalculateBounds();
-
-        return mesh;
-    }
-
-    private void InitializeCellData(Planet planet)
-    {
-        planet.cells = new Cell[icoVertices.Count];
-
-        for (int i = 0; i < icoVertices.Count; i++)
-        {
-            planet.cells[i] = new Cell
+            Vector3 normal = cellCenter.normalized;
+            Vector3 referenceDirection = (centroids[connectedCentroids[0]] - cellCenter).normalized;
+            connectedCentroids.Sort((a, b) =>
             {
-                id = i,
-                localPosition = icoVertices[i]
-            };
+                Vector3 dirA = (centroids[a] - cellCenter).normalized;
+                Vector3 dirB = (centroids[b] - cellCenter).normalized;
+                return Vector3.SignedAngle(referenceDirection, dirA, normal).CompareTo(Vector3.SignedAngle(referenceDirection, dirB, normal));
+            });
+
+            float uvX = i % 2000;
+            float uvY = Mathf.FloorToInt(i / 2000f);
+            Vector2 encodedId = new Vector2(uvX, uvY);
+
+            int centerVertexIndex = visualVerts.Count;
+            visualVerts.Add(cellCenter);
+            visualUV2.Add(encodedId);
+            visualUV3.Add(new Vector2(0, 0));
+
+            int perimeterStartIndex = visualVerts.Count;
+            for (int j = 0; j < connectedCentroids.Count; j++)
+            {
+                visualVerts.Add(centroids[connectedCentroids[j]]);
+                visualUV2.Add(encodedId);
+                visualUV3.Add(new Vector2(1, 0));
+            }
+
+            int count = connectedCentroids.Count;
+            for (int j = 0; j < count; j++)
+            {
+                int nextIndex = (j + 1) % count;
+                visualTris.Add(centerVertexIndex);
+                visualTris.Add(perimeterStartIndex + j);
+                visualTris.Add(perimeterStartIndex + nextIndex);
+            }
         }
     }
 }

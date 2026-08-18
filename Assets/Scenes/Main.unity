@@ -166,6 +166,52 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &106580543
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 106580545}
+  - component: {fileID: 106580544}
+  m_Layer: 0
+  m_Name: ViewManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &106580544
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 106580543}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d7b9d8438b19f64ab24b95e765f6d30, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ViewManager
+  maxProxyDistance: 15000
+  systemGenerator: {fileID: 1741213814}
+--- !u!4 &106580545
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 106580543}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &206896579
 GameObject:
   m_ObjectHideFlags: 0
@@ -1487,6 +1533,52 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1060911771
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1060911773}
+  - component: {fileID: 1060911772}
+  m_Layer: 0
+  m_Name: SelectionManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1060911772
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1060911771}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20c45da1308899344ba93b9fd87aed77, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SelectionManager
+  clickAction: {fileID: 3354538565263078478, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  pointerPositionAction: {fileID: 3472097101289519828, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+--- !u!4 &1060911773
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1060911771}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1134871011
 GameObject:
   m_ObjectHideFlags: 0
@@ -2090,18 +2182,17 @@ MonoBehaviour:
   systemName: Sol
   rockBudgetEarths: 15
   gasBudgetEarths: 500
-  rockySubdivisions: 5
-  gasGiantSubdivisions: 4
-  moonSubdivisions: 3
-  starSubdivisions: 4
-  asteroidSubdivisions: 2
+  targetCellRadiusKm: 50
+  maxDataSubdivisions: 7
+  maxGiantSubdivisions: 5
+  systemViewMaxSubdivisions: 4
   distanceScaleMode: 0
   linearDistanceMultiplier: 0.000001
   logDistanceMultiplier: 5
   sizeScaleMode: 0
   linearSizeMultiplier: 0.0005
   logSizeMultiplier: 1.5
-  starSizeMultiplier: 0.05
+  starSizeMultiplier: 0.01
   terrainMaterial: {fileID: -876546973899608171, guid: e2b84dbfb8ada4342943762d67ca4ca4, type: 3}
   politicalMaterial: {fileID: -876546973899608171, guid: 56b9dd9df2e9ff04aba901682311ee83, type: 3}
 --- !u!4 &1741213815
@@ -2148,6 +2239,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 11f80e85e03b43e41ab649b043922880, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpaceCameraController
+  currentState: 0
+  lookAction: {fileID: -948760940755091760, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  zoomAction: {fileID: -7612081596331192813, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  orbitButtonAction: {fileID: 3172571895755840572, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   currentFocusPoint: {x: 0, y: 0, z: 0}
   focusPanSpeed: 5
   rotationSpeed: 0.2
@@ -2155,6 +2250,7 @@ MonoBehaviour:
   zoomSpeed: 0.1
   zoomSmoothTime: 0.1
   currentDistance: 100
+  transitionThresholdRadii: 5
 --- !u!4 &1873122172
 Transform:
   m_ObjectHideFlags: 0
@@ -2452,12 +2548,14 @@ SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
   - {fileID: 1873122172}
-  - {fileID: 410087041}
+  - {fileID: 1060911773}
+  - {fileID: 106580545}
   - {fileID: 832575519}
   - {fileID: 1592591191}
   - {fileID: 2064081173}
   - {fileID: 206896581}
   - {fileID: 70031923}
   - {fileID: 1741213815}
+  - {fileID: 410087041}
   - {fileID: 672926964}
   - {fileID: 2038333904}

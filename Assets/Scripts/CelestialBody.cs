@@ -1,17 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum BodyType
-{
-    Star,
-    RockyPlanet,
-    GasGiant,
-    IceGiant,
-    DwarfPlanet,
-    Moon,
-    Asteroid,
-    Comet
-}
+public enum BodyType { Star, RockyPlanet, GasGiant, IceGiant, DwarfPlanet, Moon, Asteroid, Comet }
 
 public class CelestialBody
 {
@@ -34,6 +24,11 @@ public class CelestialBody
 
     public GameObject visualObject;
 
+    public int dataSubdivisions;
+
+    public PlanetMeshData systemViewData;
+    public PlanetMeshData localViewData;
+
     private double lastCalculatedTime = -1;
     private Vector3d cachedAbsolutePosition;
 
@@ -45,7 +40,6 @@ public class CelestialBody
         this.massEarths = massKg / AstroMath.EARTH_MASS_KG;
         this.radiusKm = radiusKm;
         this.parent = parent;
-
         this.standardGravitationalParameter = AstroMath.GRAVITATIONAL_CONSTANT * massKg;
     }
 
@@ -55,12 +49,6 @@ public class CelestialBody
         body.orbit = parameters;
         body.orbit.parentMu = this.standardGravitationalParameter;
         orbitingBodies.Add(body);
-    }
-
-    public void AddVirtualOrbit(OrbitNode node)
-    {
-        node.orbitalParameters.parentMu = this.standardGravitationalParameter;
-        virtualOrbits.Add(node);
     }
 
     public Vector3d GetAbsolutePosition(double time)

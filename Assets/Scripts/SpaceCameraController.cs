@@ -1,104 +1,167 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+public enum CameraState { SystemView, LocalView }
+
 public class SpaceCameraController : MonoBehaviour
 {
     public static SpaceCameraController Instance { get; private set; }
 
-    [Header("Focus")]
+    public CameraState currentState = CameraState.SystemView;
+    private CelestialBody focusedBody;
+
+    [Header("Input Actions")]
+    public InputActionReference lookAction;
+    public InputActionReference zoomAction;
+    public InputActionReference orbitButtonAction;
+
+    [Header("Focus & Tracking")]
     public Vector3 currentFocusPoint = Vector3.zero;
-    private Vector3 targetFocusPoint = Vector3.zero;
     public float focusPanSpeed = 5f;
 
     [Header("Orbit Rotation")]
     public float rotationSpeed = 0.2f;
     public float rotationSmoothTime = 0.1f;
+    private float currentYaw = 45f, currentPitch = 30f;
+    private float targetYaw = 45f, targetPitch = 30f;
+    private float yawVelocity, pitchVelocity;
 
-    private float currentYaw = 45f;
-    private float currentPitch = 30f;
-    private float targetYaw = 45f;
-    private float targetPitch = 30f;
-
-    private float yawVelocity;
-    private float pitchVelocity;
-
-    [Header("Zoom")]
-    public float zoomSpeed = 0.001f;
+    [Header("Zoom & Transition")]
+    public float zoomSpeed = 0.05f;
     public float zoomSmoothTime = 0.1f;
-
     public float currentDistance = 100f;
     private float targetDistance = 100f;
     private float distanceVelocity;
 
-    private float minZoomDistance = 10f;
-    private float maxZoomDistance = 1000f;
+    public float transitionThresholdRadii = 5f;
 
     private void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-        Instance = this;
+        if (Instance != null && Instance != this) Destroy(gameObject);
+        else Instance = this;
+    }
+
+    private void OnEnable()
+    {
+        if (lookAction != null) lookAction.action.Enable();
+        if (zoomAction != null) zoomAction.action.Enable();
+        if (orbitButtonAction != null) orbitButtonAction.action.Enable();
+    }
+
+    private void OnDisable()
+    {
+        if (lookAction != null) lookAction.action.Disable();
+        if (zoomAction != null) zoomAction.action.Disable();
+        if (orbitButtonAction != null) orbitButtonAction.action.Disable();
     }
 
     private void LateUpdate()
     {
         HandleInput();
+        UpdateTracking();
+        CheckLODTransition();
         UpdateCameraTransform();
+    }
+
+    public void SetFocus(CelestialBody body)
+    {
+        focusedBody = body;
     }
 
     private void HandleInput()
     {
-        if (Mouse.current == null) return;
-
-        if (Mouse.current.rightButton.isPressed)
+        if (orbitButtonAction != null && orbitButtonAction.action.IsPressed())
         {
-            Vector2 mouseDelta = Mouse.current.delta.ReadValue();
-            targetYaw += mouseDelta.x * rotationSpeed;
-            targetPitch -= mouseDelta.y * rotationSpeed;
-
-            targetPitch = Mathf.Clamp(targetPitch, -85f, 85f);
+            if (lookAction != null)
+            {
+                Vector2 lookDelta = lookAction.action.ReadValue<Vector2>();
+                targetYaw += lookDelta.x * rotationSpeed;
+                targetPitch -= lookDelta.y * rotationSpeed;
+                targetPitch = Mathf.Clamp(targetPitch, -85f, 85f);
+            }
         }
 
-        float scroll = Mouse.current.scroll.ReadValue().y;
-        if (Mathf.Abs(scroll) > 0.01f)
+        if (zoomAction != null)
         {
-            float zoomAmount = scroll * zoomSpeed * targetDistance;
-            targetDistance = Mathf.Clamp(targetDistance - zoomAmount, minZoomDistance, maxZoomDistance);
+            float scrollRaw = zoomAction.action.ReadValue<Vector2>().y;
+            float scrollNormalized = 0f;
+            if (scrollRaw > 0) scrollNormalized = 1f;
+            else if (scrollRaw < 0) scrollNormalized = -1f;
+
+            if (scrollNormalized != 0f)
+            {
+                float zoomAmount = scrollNormalized * zoomSpeed * targetDistance;
+                targetDistance -= zoomAmount;
+                if (targetDistance < 0.1f) targetDistance = 0.1f;
+            }
+        }
+    }
+
+    private void UpdateTracking()
+    {
+        if (focusedBody == null) return;
+
+        Vector3 targetFocus = Vector3.zero;
+
+        if (currentState == CameraState.SystemView)
+        {
+            if (focusedBody.visualObject != null)
+                targetFocus = focusedBody.visualObject.transform.position;
+        }
+
+        currentFocusPoint = Vector3.Lerp(currentFocusPoint, targetFocus, Time.deltaTime * focusPanSpeed);
+    }
+
+    private void CheckLODTransition()
+    {
+        if (focusedBody == null || focusedBody.visualObject == null) return;
+
+        float systemRadius = focusedBody.visualObject.transform.localScale.x / 2f;
+        float localRadius = 500f;
+        float scaleRatio = localRadius / systemRadius;
+
+        if (currentState == CameraState.SystemView)
+        {
+            float thresholdDistance = systemRadius * transitionThresholdRadii;
+
+            if (targetDistance < thresholdDistance)
+            {
+                currentState = CameraState.LocalView;
+
+                targetDistance *= scaleRatio;
+                currentDistance *= scaleRatio;
+                currentFocusPoint = Vector3.zero;
+
+                ViewManager.Instance.TransitionToLocalView(focusedBody);
+            }
+        }
+        else if (currentState == CameraState.LocalView)
+        {
+            float thresholdDistance = localRadius * transitionThresholdRadii;
+
+            if (targetDistance > thresholdDistance)
+            {
+                currentState = CameraState.SystemView;
+
+                targetDistance /= scaleRatio;
+                currentDistance /= scaleRatio;
+                currentFocusPoint = focusedBody.visualObject.transform.position;
+
+                ViewManager.Instance.TransitionToSystemView();
+            }
         }
     }
 
     private void UpdateCameraTransform()
     {
-        currentFocusPoint = Vector3.Lerp(currentFocusPoint, targetFocusPoint, Time.deltaTime * focusPanSpeed);
-
         currentYaw = Mathf.SmoothDamp(currentYaw, targetYaw, ref yawVelocity, rotationSmoothTime);
         currentPitch = Mathf.SmoothDamp(currentPitch, targetPitch, ref pitchVelocity, rotationSmoothTime);
-
         currentDistance = Mathf.SmoothDamp(currentDistance, targetDistance, ref distanceVelocity, zoomSmoothTime);
 
         Quaternion rotation = Quaternion.Euler(currentPitch, currentYaw, 0);
-
         Vector3 position = currentFocusPoint - (rotation * Vector3.forward * currentDistance);
 
         transform.position = position;
         transform.rotation = rotation;
-    }
-
-    public void SetFocus(Vector3 newFocusPoint, float bodyRadius)
-    {
-        targetFocusPoint = newFocusPoint;
-
-        minZoomDistance = bodyRadius * 1.2f;
-        maxZoomDistance = bodyRadius * 500f;
-
-        targetDistance = Mathf.Clamp(targetDistance, minZoomDistance, maxZoomDistance);
-    }
-
-    public void UpdateTrackingPosition(Vector3 movingPosition)
-    {
-        targetFocusPoint = movingPosition;
     }
 }
