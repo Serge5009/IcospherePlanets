@@ -7,7 +7,10 @@ public enum BodyType
     RockyPlanet,
     GasGiant,
     IceGiant,
-    DwarfPlanet
+    DwarfPlanet,
+    Moon,
+    Asteroid,
+    Comet
 }
 
 public class CelestialBody
@@ -20,6 +23,9 @@ public class CelestialBody
     public double massEarths;
     public double radiusKm;
     public double standardGravitationalParameter;
+
+    public double axialTilt;
+    public bool isTidallyLocked;
 
     public OrbitalParameters orbit;
 
