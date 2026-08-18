@@ -48,8 +48,41 @@ public class SystemGenerator : MonoBehaviour
         double currentTime = TimeManager.Instance.totalSeconds;
         foreach (var body in allBodies)
         {
-            UpdateVisuals(body, currentTime);
+            if (body.visualObject != null)
+            {
+                Vector3d pos = CalculateSystemViewPosition(body, currentTime);
+                float scale = CalculateSystemViewRadius(body) * 2f;
+
+                body.visualObject.transform.position = pos.ToVector3();
+                body.visualObject.transform.localScale = new Vector3(scale, scale, scale);
+            }
         }
+    }
+
+    public Vector3d CalculateSystemViewPosition(CelestialBody body, double time)
+    {
+        Vector3d absolutePos = body.GetAbsolutePosition(time);
+        double distKm = absolutePos.magnitude;
+        if (distKm == 0) return new Vector3d(0, 0, 0);
+
+        double scaledDist = distanceScaleMode == ScaleMode.Linear
+            ? distKm * linearDistanceMultiplier
+            : Math.Log10(distKm + 1) * logDistanceMultiplier;
+
+        return absolutePos.normalized * scaledDist;
+    }
+
+    public float CalculateSystemViewRadius(CelestialBody body)
+    {
+        double radiusKm = body.radiusKm;
+        double scaledRadius = sizeScaleMode == ScaleMode.Linear
+            ? radiusKm * linearSizeMultiplier
+            : Math.Log10(radiusKm + 1) * logSizeMultiplier;
+
+        float finalScale = (float)(scaledRadius * 2);
+        if (body.bodyType == BodyType.Star) finalScale *= starSizeMultiplier;
+
+        return finalScale / 2f;
     }
 
     public void GenerateSystem()
@@ -76,10 +109,8 @@ public class SystemGenerator : MonoBehaviour
         foreach (var body in allBodies)
         {
             int renderSubs = Mathf.Min(body.dataSubdivisions, systemViewMaxSubdivisions);
-
             body.systemViewData = PlanetGenerator.GenerateData((float)body.radiusKm, renderSubs, body.bodyType);
             body.localViewData = PlanetGenerator.GenerateData((float)body.radiusKm, body.dataSubdivisions, body.bodyType);
-
             SpawnVisualHexSphere(body);
         }
     }
@@ -281,37 +312,5 @@ public class SystemGenerator : MonoBehaviour
         link.body = body;
 
         body.visualObject = planetObj;
-    }
-
-    private void UpdateVisuals(CelestialBody body, double time)
-    {
-        if (body.visualObject == null) return;
-
-        Vector3d absolutePos = body.GetAbsolutePosition(time);
-        double distKm = absolutePos.magnitude;
-
-        if (distKm > 0)
-        {
-            double scaledDist = distanceScaleMode == ScaleMode.Linear
-                ? distKm * linearDistanceMultiplier
-                : Math.Log10(distKm + 1) * logDistanceMultiplier;
-
-            Vector3d scaledPos = absolutePos.normalized * scaledDist;
-            body.visualObject.transform.position = scaledPos.ToVector3();
-        }
-        else
-        {
-            body.visualObject.transform.position = Vector3.zero;
-        }
-
-        double radiusKm = body.radiusKm;
-        double scaledRadius = sizeScaleMode == ScaleMode.Linear
-            ? radiusKm * linearSizeMultiplier
-            : Math.Log10(radiusKm + 1) * logSizeMultiplier;
-
-        float finalScale = (float)(scaledRadius * 2);
-        if (body.bodyType == BodyType.Star) finalScale *= starSizeMultiplier;
-
-        body.visualObject.transform.localScale = new Vector3(finalScale, finalScale, finalScale);
     }
 }

@@ -39,6 +39,8 @@ public class SpaceCameraController : MonoBehaviour
     {
         if (Instance != null && Instance != this) Destroy(gameObject);
         else Instance = this;
+
+        if (Camera.main != null) Camera.main.farClipPlane = 100000f;
     }
 
     private void OnEnable()
@@ -109,7 +111,14 @@ public class SpaceCameraController : MonoBehaviour
                 targetFocus = focusedBody.visualObject.transform.position;
         }
 
-        currentFocusPoint = Vector3.Lerp(currentFocusPoint, targetFocus, Time.deltaTime * focusPanSpeed);
+        if (Vector3.Distance(currentFocusPoint, targetFocus) < 0.5f)
+        {
+            currentFocusPoint = targetFocus;
+        }
+        else
+        {
+            currentFocusPoint = Vector3.Lerp(currentFocusPoint, targetFocus, Time.deltaTime * focusPanSpeed);
+        }
     }
 
     private void CheckLODTransition()
@@ -117,7 +126,7 @@ public class SpaceCameraController : MonoBehaviour
         if (focusedBody == null || focusedBody.visualObject == null) return;
 
         float systemRadius = focusedBody.visualObject.transform.localScale.x / 2f;
-        float localRadius = 500f;
+        float localRadius = ViewManager.Instance.localViewUnityRadius;
         float scaleRatio = localRadius / systemRadius;
 
         if (currentState == CameraState.SystemView)
@@ -130,6 +139,7 @@ public class SpaceCameraController : MonoBehaviour
 
                 targetDistance *= scaleRatio;
                 currentDistance *= scaleRatio;
+                distanceVelocity *= scaleRatio;
                 currentFocusPoint = Vector3.zero;
 
                 ViewManager.Instance.TransitionToLocalView(focusedBody);
@@ -145,6 +155,7 @@ public class SpaceCameraController : MonoBehaviour
 
                 targetDistance /= scaleRatio;
                 currentDistance /= scaleRatio;
+                distanceVelocity /= scaleRatio;
                 currentFocusPoint = focusedBody.visualObject.transform.position;
 
                 ViewManager.Instance.TransitionToSystemView();
