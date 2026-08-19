@@ -1,4 +1,3 @@
-// CelestialBody.cs
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -15,11 +14,13 @@ public class CelestialBody
     public double radiusKm;
     public double standardGravitationalParameter;
 
-    public double axialTilt;
-    public bool isTidallyLocked;
-
     public OrbitalParameters orbit;
     public string orbitGroupName;
+
+    public double hillSphereRadiusKm;
+    public double axialTilt;
+    public double rotationPeriodSeconds;
+    public bool isTidallyLocked;
 
     public List<CelestialBody> orbitingBodies = new List<CelestialBody>();
     public List<OrbitNode> virtualOrbits = new List<OrbitNode>();
@@ -57,6 +58,14 @@ public class CelestialBody
         body.parent = this;
         body.orbit = parameters;
         body.orbit.parentMu = this.standardGravitationalParameter;
+
+        body.hillSphereRadiusKm = AstroMath.CalculateHillSphere(parameters.semiMajorAxis, body.massKg, this.massKg);
+
+        if (body.isTidallyLocked)
+        {
+            body.rotationPeriodSeconds = KeplerMath.GetOrbitalPeriod(parameters);
+        }
+
         orbitingBodies.Add(body);
     }
 
@@ -72,5 +81,13 @@ public class CelestialBody
         lastCalculatedTime = time;
 
         return absolutePos;
+    }
+
+    public float GetCurrentRotationAngle(double time)
+    {
+        if (rotationPeriodSeconds <= 0) return 0f;
+        double rotations = time / rotationPeriodSeconds;
+        double fractionalRotation = rotations - System.Math.Truncate(rotations);
+        return (float)(fractionalRotation * 360.0);
     }
 }

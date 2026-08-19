@@ -19,10 +19,19 @@ public class SystemDisplayManager : MonoBehaviour
     public float logSizeMultiplier = 1.5f;
     public float starSizeMultiplier = 0.05f;
 
+    [Header("Dynamic Zoom Scaling")]
+    public bool useDynamicZoomScaling = true;
+    [Tooltip("How aggressively objects scale up as you zoom out")]
+    public float dynamicZoomMultiplier = 0.5f;
+    public float minDynamicScale = 1f;
+    public float maxDynamicScale = 20f;
+
     [Header("Orbit Trails")]
     public Material trailMaterial;
     public int trailResolution = 60;
-    public float trailWidthMultiplier = 0.2f;
+    public float trailWidthMultiplier = 0.5f;
+    public float minTrailWidth = 0.05f;
+    public float maxTrailWidth = 2.0f;
 
     [Header("Trail Colors")]
     public Color defaultTrailColor = new Color(1f, 1f, 1f, 0.2f);
@@ -44,20 +53,29 @@ public class SystemDisplayManager : MonoBehaviour
 
         double currentTime = TimeManager.Instance.totalSeconds;
 
+        float camDist = SpaceCameraController.Instance != null ? SpaceCameraController.Instance.currentDistance : 100f;
+        float dynamicZoomFactor = 1f;
+
+        if (useDynamicZoomScaling && SpaceCameraController.Instance.currentState == CameraState.SystemView)
+        {
+            dynamicZoomFactor = Mathf.Clamp(Mathf.Log10(camDist + 10f) * dynamicZoomMultiplier, minDynamicScale, maxDynamicScale);
+        }
+
         foreach (var body in SystemDataGenerator.Instance.allBodies)
         {
             if (body.visualObject != null)
             {
                 Vector3d pos = CalculateSystemViewPosition(body, currentTime);
-                float radius = CalculateSystemViewRadius(body);
-                float scale = radius * 2f;
+
+                float baseRadius = CalculateBaseSystemViewRadius(body);
+                float finalScale = baseRadius * 2f * dynamicZoomFactor;
 
                 body.visualObject.transform.position = pos.ToVector3();
-                body.visualObject.transform.localScale = new Vector3(scale, scale, scale);
+                body.visualObject.transform.localScale = new Vector3(finalScale, finalScale, finalScale);
 
                 if (body.parent != null && body.parent.bodyType != BodyType.Star)
                 {
-                    UpdateDynamicOrbitTrail(body, radius, currentTime);
+                    UpdateDynamicOrbitTrail(body, baseRadius, currentTime, dynamicZoomFactor);
                 }
             }
         }
@@ -80,7 +98,7 @@ public class SystemDisplayManager : MonoBehaviour
         return CalculateScaledPosition(body.GetAbsolutePosition(time));
     }
 
-    public float CalculateSystemViewRadius(CelestialBody body)
+    public float CalculateBaseSystemViewRadius(CelestialBody body)
     {
         double radiusKm = body.radiusKm;
         double scaledRadius = sizeScaleMode == ScaleMode.Linear
@@ -130,18 +148,24 @@ public class SystemDisplayManager : MonoBehaviour
                     Vector3 visualPos = CalculateScaledPosition(body.cachedOrbitPoints[i]).ToVector3();
                     lr.SetPosition(i, visualPos);
                 }
+
+                float baseRadius = CalculateBaseSystemViewRadius(body);
+                float logWidth = Mathf.Log10(baseRadius + 1f) * trailWidthMultiplier;
+                lr.widthMultiplier = Mathf.Clamp(logWidth, minTrailWidth, maxTrailWidth);
             }
         }
 
         body.visualObject = planetObj;
     }
 
-    private void UpdateDynamicOrbitTrail(CelestialBody body, float currentVisualRadius, double currentTime)
+    private void UpdateDynamicOrbitTrail(CelestialBody body, float baseRadius, double currentTime, float dynamicZoomFactor)
     {
         LineRenderer lr = body.visualObject.GetComponent<LineRenderer>();
         if (lr == null) return;
 
-        lr.widthMultiplier = currentVisualRadius * trailWidthMultiplier;
+        float logWidth = Mathf.Log10(baseRadius + 1f) * trailWidthMultiplier;
+        lr.widthMultiplier = Mathf.Clamp(logWidth, minTrailWidth, maxTrailWidth) * dynamicZoomFactor;
+
         Vector3d parentPos = body.parent.GetAbsolutePosition(currentTime);
 
         for (int i = 0; i < trailResolution; i++)

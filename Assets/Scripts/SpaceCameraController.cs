@@ -129,7 +129,7 @@ public class SpaceCameraController : MonoBehaviour
     {
         if (focusedBody == null || focusedBody.visualObject == null) return;
 
-        float systemRadius = SystemDisplayManager.Instance.CalculateSystemViewRadius(focusedBody);
+        float systemRadius = SystemDisplayManager.Instance.CalculateBaseSystemViewRadius(focusedBody);
         float localRadius = ViewManager.Instance.localViewUnityRadius;
         float scaleRatio = localRadius / systemRadius;
 
@@ -177,6 +177,7 @@ public class SpaceCameraController : MonoBehaviour
         currentDistance = Mathf.SmoothDamp(currentDistance, targetDistance, ref distanceVelocity, zoomSmoothTime);
 
         Quaternion rotation = Quaternion.Euler(currentPitch, currentYaw, 0);
+
         Vector3 position = currentFocusPoint - (rotation * Vector3.forward * currentDistance);
 
         transform.position = position;

@@ -3,10 +3,8 @@ using System;
 public static class AstroMath
 {
     public const double AU_TO_KM = 149597870.7;
-
     public const double EARTH_MASS_KG = 5.972e24;
     public const double SOLAR_MASS_KG = 1.989e30;
-
     public const double GRAVITATIONAL_CONSTANT = 6.67430e-20;
 
     public static double CalculateLuminosity(double solarMasses)
@@ -24,5 +22,11 @@ public static class AstroMath
     public static double CalculateFrostLine(double luminosity)
     {
         return 2.7 * Math.Sqrt(luminosity);
+    }
+
+    public static double CalculateHillSphere(double semiMajorAxisKm, double bodyMass, double parentMass)
+    {
+        if (parentMass <= 0) return 0;
+        return semiMajorAxisKm * Math.Pow(bodyMass / (3.0 * parentMass), 1.0 / 3.0);
     }
 }

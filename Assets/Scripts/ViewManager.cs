@@ -93,14 +93,14 @@ public class ViewManager : MonoBehaviour
     private void UpdateProxyBodies(double time)
     {
         Vector3 focusSysPos = SystemDisplayManager.Instance.CalculateSystemViewPosition(currentFocusedBody, time).ToVector3();
-        float focusSysRadius = SystemDisplayManager.Instance.CalculateSystemViewRadius(currentFocusedBody);
+        float focusSysRadius = SystemDisplayManager.Instance.CalculateBaseSystemViewRadius(currentFocusedBody);
 
         float scaleRatio = localViewUnityRadius / focusSysRadius;
 
         foreach (var proxy in proxyBodies)
         {
             Vector3 proxySysPos = SystemDisplayManager.Instance.CalculateSystemViewPosition(proxy.body, time).ToVector3();
-            float proxySysRadius = SystemDisplayManager.Instance.CalculateSystemViewRadius(proxy.body);
+            float proxySysRadius = SystemDisplayManager.Instance.CalculateBaseSystemViewRadius(proxy.body);
 
             Vector3 relativeSysPos = proxySysPos - focusSysPos;
             Vector3 localPos = relativeSysPos * scaleRatio;
