@@ -65,7 +65,7 @@ public class ViewManager : MonoBehaviour
         Planet planet = currentLocalPlanet.AddComponent<Planet>();
         planet.InitializeFromData(body, body.localViewData, SystemDisplayManager.Instance.terrainMaterial, SystemDisplayManager.Instance.politicalMaterial);
 
-        SystemDisplayManager.Instance.gameObject.SetActive(false);
+        SystemDisplayManager.Instance.SetSystemViewActive(false);
         SpawnProxyBodies(body);
 
         SystemDisplayManager.Instance.UpdateTrailContext(body, CameraState.PlanetaryHigh);
@@ -78,7 +78,7 @@ public class ViewManager : MonoBehaviour
         foreach (var proxy in proxyBodies) Destroy(proxy.obj);
         proxyBodies.Clear();
 
-        SystemDisplayManager.Instance.gameObject.SetActive(true);
+        SystemDisplayManager.Instance.SetSystemViewActive(true);
         SystemDisplayManager.Instance.UpdateTrailContext(currentFocusedBody, CameraState.System);
 
         currentFocusedBody = null;
@@ -126,17 +126,38 @@ public class ViewManager : MonoBehaviour
             link.body = body;
 
             LineRenderer lr = null;
-            if (body.parent == focus)
+
+            bool drawLocalTrail = false;
+            if (focus.bodyType == BodyType.Moon)
+            {
+                if (body.parent == focus.parent && body != focus) drawLocalTrail = true;
+            }
+            else
+            {
+                if (body.parent == focus) drawLocalTrail = true;
+            }
+
+            if (drawLocalTrail)
             {
                 lr = proxy.AddComponent<LineRenderer>();
                 lr.useWorldSpace = true;
                 lr.positionCount = SystemDisplayManager.Instance.trailResolution;
-                lr.material = SystemDisplayManager.Instance.trailMaterial;
+
+                Material mat = SystemDisplayManager.Instance.trailMaterial != null ?
+                    new Material(SystemDisplayManager.Instance.trailMaterial) :
+                    new Material(Shader.Find("Sprites/Default"));
+                lr.material = mat;
+
                 lr.startWidth = 0.02f;
                 lr.endWidth = 0.02f;
                 lr.loop = true;
-                lr.startColor = SystemDisplayManager.Instance.defaultTrailColor;
-                lr.endColor = SystemDisplayManager.Instance.defaultTrailColor;
+
+                Color c = SystemDisplayManager.Instance.defaultTrailColor;
+                lr.startColor = c;
+                lr.endColor = c;
+                if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", c);
+                if (mat.HasProperty("_Color")) mat.SetColor("_Color", c);
+                if (mat.HasProperty("_EmissionColor")) mat.SetColor("_EmissionColor", c);
             }
 
             proxyBodies.Add((proxy, body, lr));
@@ -145,19 +166,16 @@ public class ViewManager : MonoBehaviour
 
     private void UpdateProxyBodies(double time)
     {
-        Vector3 focusSysPos = SystemDisplayManager.Instance.CalculateSystemViewPosition(currentFocusedBody, time).ToVector3();
-        float focusSysRadius = SystemDisplayManager.Instance.CalculateBaseSystemViewRadius(currentFocusedBody);
-
-        float scaleRatio = normalizedPlanetRadius / focusSysRadius;
+        Vector3d focusAbs = currentFocusedBody.GetAbsolutePosition(time);
+        double localScaleFactor = normalizedPlanetRadius / currentFocusedBody.radiusKm;
 
         foreach (var proxy in proxyBodies)
         {
-            Vector3 proxySysPos = SystemDisplayManager.Instance.CalculateSystemViewPosition(proxy.body, time).ToVector3();
-            float proxySysRadius = SystemDisplayManager.Instance.CalculateBaseSystemViewRadius(proxy.body);
+            Vector3d proxyAbs = proxy.body.GetAbsolutePosition(time);
+            Vector3d relativeKm = proxyAbs - focusAbs;
 
-            Vector3 relativeSysPos = proxySysPos - focusSysPos;
-            Vector3 localPos = relativeSysPos * scaleRatio;
-            float localScale = proxySysRadius * scaleRatio * 2f;
+            Vector3 localPos = (relativeKm * localScaleFactor).ToVector3();
+            float localScale = (float)(proxy.body.radiusKm * localScaleFactor * 2.0);
 
             float dist = localPos.magnitude;
             if (dist > maxProxyDistance)
@@ -177,12 +195,17 @@ public class ViewManager : MonoBehaviour
 
             if (proxy.trail != null && proxy.body.cachedOrbitPoints != null)
             {
+                Vector3d parentAbsPos = proxy.body.parent.GetAbsolutePosition(time);
+                Vector3d parentRelativeKm = parentAbsPos - focusAbs;
+                Vector3 parentLocalPos = (parentRelativeKm * localScaleFactor).ToVector3();
+                parentLocalPos = skyRotationOffset * parentLocalPos;
+
                 for (int i = 0; i < SystemDisplayManager.Instance.trailResolution; i++)
                 {
-                    Vector3 trailPos = (proxy.body.cachedOrbitPoints[i] * SystemDisplayManager.Instance.trueScaleMultiplier).ToVector3();
-                    trailPos = (trailPos - focusSysPos) * scaleRatio;
-                    trailPos = skyRotationOffset * trailPos;
-                    proxy.trail.SetPosition(i, trailPos);
+                    Vector3 trailPointLocal = (proxy.body.cachedOrbitPoints[i] * localScaleFactor).ToVector3();
+                    trailPointLocal = skyRotationOffset * trailPointLocal;
+
+                    proxy.trail.SetPosition(i, parentLocalPos + trailPointLocal);
                 }
             }
         }

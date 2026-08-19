@@ -26,8 +26,17 @@ public class SystemDisplayManager : MonoBehaviour
     [Header("Orbit Trails")]
     public Material trailMaterial;
     public int trailResolution = 60;
+
+    [Tooltip("Multiplier for the logarithmic trail width")]
     public float trailWidthMultiplier = 0.2f;
+    public float minTrailWidth = 0.02f;
+    public float maxTrailWidth = 1.5f;
+
+    [Header("Trail Colors")]
+    [ColorUsage(true, true)]
     public Color defaultTrailColor = new Color(1f, 1f, 1f, 0.2f);
+
+    [ColorUsage(true, true)]
     public Color highlightTrailColor = new Color(0f, 1f, 0.5f, 1f);
 
     [Header("Visuals")]
@@ -89,7 +98,6 @@ public class SystemDisplayManager : MonoBehaviour
     public Vector3d CalculateSystemViewPosition(CelestialBody body, double time)
     {
         Vector3d absolutePos = body.GetAbsolutePosition(time);
-
         return absolutePos * trueScaleMultiplier;
     }
 
@@ -131,13 +139,10 @@ public class SystemDisplayManager : MonoBehaviour
             LineRenderer lr = planetObj.AddComponent<LineRenderer>();
             lr.useWorldSpace = true;
             lr.positionCount = trailResolution;
-            lr.material = trailMaterial != null ? trailMaterial : new Material(Shader.Find("Sprites/Default"));
 
-            lr.startWidth = 1f;
-            lr.endWidth = 1f;
+            lr.material = new Material(trailMaterial != null ? trailMaterial : new Material(Shader.Find("Sprites/Default")));
+
             lr.loop = true;
-            lr.startColor = defaultTrailColor;
-            lr.endColor = defaultTrailColor;
 
             if (body.parent.bodyType == BodyType.Star)
             {
@@ -146,9 +151,6 @@ public class SystemDisplayManager : MonoBehaviour
                     Vector3 visualPos = (body.cachedOrbitPoints[i] * trueScaleMultiplier).ToVector3();
                     lr.SetPosition(i, visualPos);
                 }
-
-                float maxRadius = CalculateSystemViewRadius(body, 1f);
-                lr.widthMultiplier = maxRadius * trailWidthMultiplier;
             }
         }
 
@@ -165,7 +167,9 @@ public class SystemDisplayManager : MonoBehaviour
         LineRenderer lr = body.visualObject.GetComponent<LineRenderer>();
         if (lr == null) return;
 
-        lr.widthMultiplier = currentVisualRadius * trailWidthMultiplier;
+        float logWidth = Mathf.Log10(currentVisualRadius + 1f) * trailWidthMultiplier;
+        lr.widthMultiplier = Mathf.Clamp(logWidth, minTrailWidth, maxTrailWidth);
+
         Vector3d parentPos = body.parent.GetAbsolutePosition(currentTime);
 
         for (int i = 0; i < trailResolution; i++)
@@ -199,17 +203,26 @@ public class SystemDisplayManager : MonoBehaviour
             }
             else
             {
-                if (body == focus) show = false;
-                else if (body.parent == focus) show = true;
-                else if (focus.parent != null && body.parent == focus.parent) show = true;
+                show = false;
             }
 
             lr.enabled = show;
             if (show)
             {
                 Color c = highlight ? highlightTrailColor : defaultTrailColor;
+
                 lr.startColor = c;
                 lr.endColor = c;
+
+                if (lr.material.HasProperty("_Color"))
+                {
+                    lr.material.SetColor("_Color", c);
+                }
+
+                if (lr.material.HasProperty("_EmissionColor"))
+                {
+                    lr.material.SetColor("_EmissionColor", c);
+                }
             }
         }
     }

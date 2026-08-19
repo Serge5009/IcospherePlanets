@@ -2258,8 +2258,10 @@ MonoBehaviour:
   trailMaterial: {fileID: 2100000, guid: e4fca835b4206034eaa7ff79876b8d64, type: 2}
   trailResolution: 128
   trailWidthMultiplier: 0.5
-  defaultTrailColor: {r: 0, g: 1, b: 0.5019608, a: 0.2}
-  highlightTrailColor: {r: 1, g: 0.707659, b: 0, a: 1}
+  minTrailWidth: 0.02
+  maxTrailWidth: 1.5
+  defaultTrailColor: {r: 0.8620791, g: 2.9960783, b: 2.5052774, a: 1}
+  highlightTrailColor: {r: 8, g: 5.661272, b: 0, a: 1}
   terrainMaterial: {fileID: 2100000, guid: 5d5a58ffbb12aad48b71b005c3a57dd8, type: 2}
   politicalMaterial: {fileID: 2100000, guid: 6ec0d1aea9011b146a4200d536ae56c7, type: 2}
 --- !u!114 &1741213817
