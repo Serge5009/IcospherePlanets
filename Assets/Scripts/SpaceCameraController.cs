@@ -1,4 +1,3 @@
-// SpaceCameraController.cs
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -36,16 +35,17 @@ public class SpaceCameraController : MonoBehaviour
     private float targetDistance = 100f;
     private float distanceVelocity;
 
-    [Header("Resistance Bounce")]
+    [Header("Thresholds")]
     public float transitionResistance = 0.5f;
+    public float planetaryLowThresholdRadii = 5f;
+    public float terrainThresholdRadii = 1.5f;
+
     private float scrollAccumulator = 0f;
     private float transitionCooldownTimer = 0f;
-
     private bool isInitialized = false;
+
     private float currentMinZDist;
     private float currentMaxZDist;
-    private float currentSyncWeight = 0f;
-    private float syncVelocity;
 
     private void Awake()
     {
@@ -83,11 +83,10 @@ public class SpaceCameraController : MonoBehaviour
         CheckStateTransitions();
         UpdateCameraTransform();
 
-        // FIX: Dynamically adjust clip planes to prevent the Frustum Error and Z-Fighting
         if (Camera.main != null)
         {
             Camera.main.nearClipPlane = Mathf.Clamp(currentDistance * 0.1f, 0.0001f, 10f);
-            Camera.main.farClipPlane = Mathf.Clamp(currentDistance * 1000f, 100000f, 10000000f);
+            Camera.main.farClipPlane = 10000000f;
         }
     }
 
@@ -118,6 +117,25 @@ public class SpaceCameraController : MonoBehaviour
     public void SetFocus(CelestialBody newBody)
     {
         if (newBody == focusedBody) return;
+
+        if (currentState == CameraState.PlanetaryHigh || currentState == CameraState.PlanetaryLow || currentState == CameraState.Terrain)
+        {
+            bool isSameSystem = (newBody.parent == focusedBody) ||
+                                (newBody == focusedBody.parent) ||
+                                (newBody.parent != null && newBody.parent == focusedBody.parent);
+
+            if (isSameSystem)
+            {
+                focusedBody = newBody;
+
+                targetDistance = ViewManager.Instance.normalizedPlanetRadius * 5f;
+
+                currentState = CameraState.PlanetaryHigh;
+                ViewManager.Instance.SetTopocentricMode(false);
+                ViewManager.Instance.TransitionToLocalView(focusedBody);
+                return;
+            }
+        }
 
         if (currentState == CameraState.System || currentState == CameraState.Interstellar)
         {
@@ -172,8 +190,6 @@ public class SpaceCameraController : MonoBehaviour
                 {
                     scrollAccumulator = 0f;
                     targetDistance -= zoomAmount;
-
-                    // FIX: Allow the camera to zoom in extremely close for tiny asteroids
                     if (targetDistance < 0.000001f) targetDistance = 0.000001f;
                 }
             }
@@ -234,14 +250,14 @@ public class SpaceCameraController : MonoBehaviour
         zZeroDist = (float)(focusedBody.localSystemBoundaryKm * distMult);
         zOneDist = (float)(SystemDataGenerator.Instance.systemEdgeKm * distMult);
 
-        float localRadius = ViewManager.Instance.localViewUnityRadius;
+        float localRadius = ViewManager.Instance.normalizedPlanetRadius;
         float systemRadiusAtZ0 = SystemDisplayManager.Instance.CalculateSystemViewRadius(focusedBody, 0f);
 
         scaleRatio = localRadius / systemRadiusAtZ0;
 
         planHighDist = zZeroDist * scaleRatio;
-        planLowDist = localRadius * 10f;
-        terrainDist = localRadius * 2f;
+        planLowDist = localRadius * planetaryLowThresholdRadii;
+        terrainDist = localRadius * terrainThresholdRadii;
     }
 
     private bool IsPushingAgainstThreshold(float scrollDirection)
@@ -296,6 +312,8 @@ public class SpaceCameraController : MonoBehaviour
         else if (currentState == CameraState.PlanetaryHigh && targetDistance <= planLowDist)
         {
             currentState = CameraState.PlanetaryLow;
+
+            ViewManager.Instance.SetTopocentricMode(true);
             ExecuteTransition();
         }
         else if (currentState == CameraState.PlanetaryLow && targetDistance <= terrainDist)
@@ -311,6 +329,8 @@ public class SpaceCameraController : MonoBehaviour
         else if (currentState == CameraState.PlanetaryLow && targetDistance >= planLowDist)
         {
             currentState = CameraState.PlanetaryHigh;
+
+            ViewManager.Instance.SetTopocentricMode(false);
             ExecuteTransition();
         }
         else if (currentState == CameraState.PlanetaryHigh && targetDistance >= planHighDist)
@@ -346,21 +366,9 @@ public class SpaceCameraController : MonoBehaviour
         currentDistance = Mathf.SmoothDamp(currentDistance, targetDistance, ref distanceVelocity, zoomSmoothTime);
 
         Quaternion baseRotation = Quaternion.Euler(currentPitch, currentYaw, 0);
-
-        float targetSync = (currentState == CameraState.PlanetaryLow || currentState == CameraState.Terrain) ? 1f : 0f;
-        currentSyncWeight = Mathf.SmoothDamp(currentSyncWeight, targetSync, ref syncVelocity, 1.0f);
-
-        Quaternion finalRotation = baseRotation;
-        if (currentSyncWeight > 0.001f && focusedBody != null)
-        {
-            Quaternion planetRotation = Quaternion.Euler((float)focusedBody.axialTilt, focusedBody.currentRotationAngle, 0);
-            Quaternion syncedRotation = planetRotation * baseRotation;
-            finalRotation = Quaternion.Slerp(baseRotation, syncedRotation, currentSyncWeight);
-        }
-
-        Vector3 position = currentFocusPoint - (finalRotation * Vector3.forward * currentDistance);
+        Vector3 position = currentFocusPoint - (baseRotation * Vector3.forward * currentDistance);
 
         transform.position = position;
-        transform.rotation = finalRotation;
+        transform.rotation = baseRotation;
     }
 }

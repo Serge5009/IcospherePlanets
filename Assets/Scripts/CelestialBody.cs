@@ -17,13 +17,14 @@ public class CelestialBody
     public double axialTilt;
     public double rotationPeriodSeconds;
     public bool isTidallyLocked;
+
     public float currentRotationAngle;
+    public float deltaRotationAngle;
 
     public OrbitalParameters orbit;
     public string orbitGroupName;
 
     public double hillSphereRadiusKm;
-
     public double localSystemBoundaryKm;
 
     public List<CelestialBody> orbitingBodies = new List<CelestialBody>();
@@ -90,8 +91,20 @@ public class CelestialBody
     public void UpdateRotation(double time)
     {
         if (rotationPeriodSeconds <= 0) return;
+
         double rotations = time / rotationPeriodSeconds;
         double fractionalRotation = rotations - System.Math.Truncate(rotations);
-        currentRotationAngle = (float)(fractionalRotation * 360.0);
+        float newAngle = (float)(fractionalRotation * 360.0);
+
+        if (lastCalculatedTime != -1)
+        {
+            deltaRotationAngle = Mathf.DeltaAngle(currentRotationAngle, newAngle);
+        }
+        else
+        {
+            deltaRotationAngle = 0f;
+        }
+
+        currentRotationAngle = newAngle;
     }
 }

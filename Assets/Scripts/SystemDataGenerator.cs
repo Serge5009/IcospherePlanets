@@ -1,4 +1,3 @@
-// SystemDataGenerator.cs
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -30,7 +29,6 @@ public class SystemDataGenerator : MonoBehaviour
         else Instance = this;
     }
 
-    // NEW: Always update rotation, even in Local View
     private void Update()
     {
         if (TimeManager.Instance == null) return;

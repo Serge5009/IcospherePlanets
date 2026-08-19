@@ -1,4 +1,3 @@
-// SystemDisplayManager.cs
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -7,18 +6,17 @@ public class SystemDisplayManager : MonoBehaviour
 {
     public static SystemDisplayManager Instance { get; private set; }
 
-    public enum ScaleMode { Linear, Logarithmic }
+    [Header("True Scale Foundation")]
+    public float trueScaleMultiplier = 0.0000001f;
 
-    [Header("Distance Scaling (Strictly Linear)")]
+    [Header("Distance Scaling (System View)")]
     public float linearDistanceMultiplier = 0.0000001f;
+    public float logDistanceMultiplier = 5f;
 
     [Header("Size Scaling (Z-Lerp)")]
-    public float trueScaleMultiplier = 0.0000001f;
     public float maxLogSizeMultiplier = 1.5f;
     public float minClickableSizeUnity = 0.5f;
     public float starMaxScaleMultiplier = 0.05f;
-
-    [Tooltip("Keep the curve flat at 0 for the first 20% so planets stay true-scale right before the transition!")]
     public AnimationCurve planetSizeCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
     [Header("Visibility")]
@@ -69,22 +67,16 @@ public class SystemDisplayManager : MonoBehaviour
         }
     }
 
-    // NEW: Safely hides the System View visuals without killing the background math
     public void SetSystemViewActive(bool isActive)
     {
         foreach (var body in SystemDataGenerator.Instance.allBodies)
         {
             if (body.visualObject != null)
             {
-                // If we are turning it on, check if it's a moon and if we are allowed to show moons
                 if (isActive && body.bodyType == BodyType.Moon && !showMoonsInSystemView)
-                {
                     body.visualObject.SetActive(false);
-                }
                 else
-                {
                     body.visualObject.SetActive(isActive);
-                }
             }
         }
     }
@@ -97,7 +89,8 @@ public class SystemDisplayManager : MonoBehaviour
     public Vector3d CalculateSystemViewPosition(CelestialBody body, double time)
     {
         Vector3d absolutePos = body.GetAbsolutePosition(time);
-        return absolutePos * linearDistanceMultiplier;
+
+        return absolutePos * trueScaleMultiplier;
     }
 
     public float CalculateSystemViewRadius(CelestialBody body, float zLevel)
@@ -110,6 +103,11 @@ public class SystemDisplayManager : MonoBehaviour
 
         float curveZ = planetSizeCurve.Evaluate(zLevel);
         return Mathf.Lerp(trueRadiusUnity, maxRadiusUnity, curveZ);
+    }
+
+    public float CalculateBaseSystemViewRadius(CelestialBody body)
+    {
+        return (float)(body.radiusKm * trueScaleMultiplier);
     }
 
     public void SpawnVisualHexSphere(CelestialBody body)
@@ -145,7 +143,7 @@ public class SystemDisplayManager : MonoBehaviour
             {
                 for (int i = 0; i < trailResolution; i++)
                 {
-                    Vector3 visualPos = (body.cachedOrbitPoints[i] * linearDistanceMultiplier).ToVector3();
+                    Vector3 visualPos = (body.cachedOrbitPoints[i] * trueScaleMultiplier).ToVector3();
                     lr.SetPosition(i, visualPos);
                 }
 
@@ -156,7 +154,6 @@ public class SystemDisplayManager : MonoBehaviour
 
         body.visualObject = planetObj;
 
-        // Hide moons immediately if setting is false
         if (body.bodyType == BodyType.Moon && !showMoonsInSystemView)
         {
             planetObj.SetActive(false);
@@ -174,7 +171,7 @@ public class SystemDisplayManager : MonoBehaviour
         for (int i = 0; i < trailResolution; i++)
         {
             Vector3d absolutePos = parentPos + body.cachedOrbitPoints[i];
-            Vector3 visualPos = (absolutePos * linearDistanceMultiplier).ToVector3();
+            Vector3 visualPos = (absolutePos * trueScaleMultiplier).ToVector3();
             lr.SetPosition(i, visualPos);
         }
     }
