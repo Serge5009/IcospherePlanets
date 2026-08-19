@@ -2196,13 +2196,64 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3c28624c34bba4e4086bbecf6dfe3a39, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SystemDisplayManager
-  distanceScaleMode: 0
   linearDistanceMultiplier: 0.0000001
-  logDistanceMultiplier: 1
-  sizeScaleMode: 0
-  linearSizeMultiplier: 0.00005
-  logSizeMultiplier: 0.12
-  starSizeMultiplier: 0.05
+  trueScaleMultiplier: 0.0000001
+  maxLogSizeMultiplier: 2
+  minClickableSizeUnity: 0.5
+  starMaxScaleMultiplier: 0.3
+  planetSizeCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.6564309
+      value: 0.097873256
+      inSlope: 0.15492405
+      outSlope: 0.15492405
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.147796
+    - serializedVersion: 3
+      time: 0.801243
+      value: 0.58267105
+      inSlope: 10.390042
+      outSlope: 10.390042
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.10645832
+      outWeight: 0.09554907
+    - serializedVersion: 3
+      time: 0.86764735
+      value: 0.8894439
+      inSlope: 1.6439911
+      outSlope: 1.6439911
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.5713773
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 2
+      outSlope: 2
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  showMoonsInSystemView: 0
+  drawTrailsForMinorBodies: 0
   trailMaterial: {fileID: 2100000, guid: e4fca835b4206034eaa7ff79876b8d64, type: 2}
   trailResolution: 128
   trailWidthMultiplier: 0.5
@@ -2294,7 +2345,7 @@ MonoBehaviour:
   zoomSpeed: 0.1
   zoomSmoothTime: 0.1
   currentDistance: 100
-  transitionThresholdRadii: 5
+  transitionResistance: 0
 --- !u!4 &1873122172
 Transform:
   m_ObjectHideFlags: 0
@@ -2419,22 +2470,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 86a55271174bdb84eae693ec656ea0a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SolarSystemManager
-  targetCellRadiusKm: 50
-  maxSubdivisions: 7
-  unityVisualRadius: 1000
-  planetsToGenerate:
-  - name: Earth
-    radiusKm: 6371
-  - name: Moon
-    radiusKm: 1737
-  - name: Ceres
-    radiusKm: 950
-  - name: Titania
-    radiusKm: 788
-  - name: Some rock
-    radiusKm: 50
-  terrainMaterial: {fileID: 2100000, guid: 5d5a58ffbb12aad48b71b005c3a57dd8, type: 2}
-  politicalMaterial: {fileID: 2100000, guid: 6ec0d1aea9011b146a4200d536ae56c7, type: 2}
 --- !u!4 &2064081173
 Transform:
   m_ObjectHideFlags: 0

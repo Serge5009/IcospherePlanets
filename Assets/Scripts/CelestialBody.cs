@@ -14,13 +14,17 @@ public class CelestialBody
     public double radiusKm;
     public double standardGravitationalParameter;
 
+    public double axialTilt;
+    public double rotationPeriodSeconds;
+    public bool isTidallyLocked;
+    public float currentRotationAngle;
+
     public OrbitalParameters orbit;
     public string orbitGroupName;
 
     public double hillSphereRadiusKm;
-    public double axialTilt;
-    public double rotationPeriodSeconds;
-    public bool isTidallyLocked;
+
+    public double localSystemBoundaryKm;
 
     public List<CelestialBody> orbitingBodies = new List<CelestialBody>();
     public List<OrbitNode> virtualOrbits = new List<OrbitNode>();
@@ -83,11 +87,11 @@ public class CelestialBody
         return absolutePos;
     }
 
-    public float GetCurrentRotationAngle(double time)
+    public void UpdateRotation(double time)
     {
-        if (rotationPeriodSeconds <= 0) return 0f;
+        if (rotationPeriodSeconds <= 0) return;
         double rotations = time / rotationPeriodSeconds;
         double fractionalRotation = rotations - System.Math.Truncate(rotations);
-        return (float)(fractionalRotation * 360.0);
+        currentRotationAngle = (float)(fractionalRotation * 360.0);
     }
 }

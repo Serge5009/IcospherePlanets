@@ -1,3 +1,4 @@
+// SystemDisplayManager.cs
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -8,32 +9,26 @@ public class SystemDisplayManager : MonoBehaviour
 
     public enum ScaleMode { Linear, Logarithmic }
 
-    [Header("Distance Scaling (System View)")]
-    public ScaleMode distanceScaleMode = ScaleMode.Linear;
+    [Header("Distance Scaling (Strictly Linear)")]
     public float linearDistanceMultiplier = 0.0000001f;
-    public float logDistanceMultiplier = 5f;
 
-    [Header("Planet Size Scaling (System View)")]
-    public ScaleMode sizeScaleMode = ScaleMode.Linear;
-    public float linearSizeMultiplier = 0.0001f;
-    public float logSizeMultiplier = 1.5f;
-    public float starSizeMultiplier = 0.05f;
+    [Header("Size Scaling (Z-Lerp)")]
+    public float trueScaleMultiplier = 0.0000001f;
+    public float maxLogSizeMultiplier = 1.5f;
+    public float minClickableSizeUnity = 0.5f;
+    public float starMaxScaleMultiplier = 0.05f;
 
-    [Header("Dynamic Zoom Scaling")]
-    public bool useDynamicZoomScaling = true;
-    [Tooltip("How aggressively objects scale up as you zoom out")]
-    public float dynamicZoomMultiplier = 0.5f;
-    public float minDynamicScale = 1f;
-    public float maxDynamicScale = 20f;
+    [Tooltip("Keep the curve flat at 0 for the first 20% so planets stay true-scale right before the transition!")]
+    public AnimationCurve planetSizeCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+
+    [Header("Visibility")]
+    public bool showMoonsInSystemView = false;
+    public bool drawTrailsForMinorBodies = false;
 
     [Header("Orbit Trails")]
     public Material trailMaterial;
     public int trailResolution = 60;
-    public float trailWidthMultiplier = 0.5f;
-    public float minTrailWidth = 0.05f;
-    public float maxTrailWidth = 2.0f;
-
-    [Header("Trail Colors")]
+    public float trailWidthMultiplier = 0.2f;
     public Color defaultTrailColor = new Color(1f, 1f, 1f, 0.2f);
     public Color highlightTrailColor = new Color(0f, 1f, 0.5f, 1f);
 
@@ -52,63 +47,69 @@ public class SystemDisplayManager : MonoBehaviour
         if (TimeManager.Instance == null || SystemDataGenerator.Instance == null) return;
 
         double currentTime = TimeManager.Instance.totalSeconds;
-
-        float camDist = SpaceCameraController.Instance != null ? SpaceCameraController.Instance.currentDistance : 100f;
-        float dynamicZoomFactor = 1f;
-
-        if (useDynamicZoomScaling && SpaceCameraController.Instance.currentState == CameraState.SystemView)
-        {
-            dynamicZoomFactor = Mathf.Clamp(Mathf.Log10(camDist + 10f) * dynamicZoomMultiplier, minDynamicScale, maxDynamicScale);
-        }
+        float currentZ = SpaceCameraController.Instance != null ? SpaceCameraController.Instance.currentZLevel : 1f;
 
         foreach (var body in SystemDataGenerator.Instance.allBodies)
         {
-            if (body.visualObject != null)
+            if (body.visualObject != null && body.visualObject.activeSelf)
             {
                 Vector3d pos = CalculateSystemViewPosition(body, currentTime);
-
-                float baseRadius = CalculateBaseSystemViewRadius(body);
-                float finalScale = baseRadius * 2f * dynamicZoomFactor;
+                float radius = CalculateSystemViewRadius(body, currentZ);
+                float scale = radius * 2f;
 
                 body.visualObject.transform.position = pos.ToVector3();
-                body.visualObject.transform.localScale = new Vector3(finalScale, finalScale, finalScale);
+                body.visualObject.transform.localScale = new Vector3(scale, scale, scale);
+                body.visualObject.transform.rotation = Quaternion.Euler((float)body.axialTilt, body.currentRotationAngle, 0);
 
-                if (body.parent != null && body.parent.bodyType != BodyType.Star)
+                if (body.parent != null && (!IsMinorBody(body) || drawTrailsForMinorBodies))
                 {
-                    UpdateDynamicOrbitTrail(body, baseRadius, currentTime, dynamicZoomFactor);
+                    UpdateDynamicOrbitTrail(body, radius, currentTime);
                 }
             }
         }
     }
 
-    public Vector3d CalculateScaledPosition(Vector3d absolutePos)
+    // NEW: Safely hides the System View visuals without killing the background math
+    public void SetSystemViewActive(bool isActive)
     {
-        double distKm = absolutePos.magnitude;
-        if (distKm == 0) return new Vector3d(0, 0, 0);
+        foreach (var body in SystemDataGenerator.Instance.allBodies)
+        {
+            if (body.visualObject != null)
+            {
+                // If we are turning it on, check if it's a moon and if we are allowed to show moons
+                if (isActive && body.bodyType == BodyType.Moon && !showMoonsInSystemView)
+                {
+                    body.visualObject.SetActive(false);
+                }
+                else
+                {
+                    body.visualObject.SetActive(isActive);
+                }
+            }
+        }
+    }
 
-        double scaledDist = distanceScaleMode == ScaleMode.Linear
-            ? distKm * linearDistanceMultiplier
-            : Math.Log10(distKm + 1) * logDistanceMultiplier;
-
-        return absolutePos.normalized * scaledDist;
+    private bool IsMinorBody(CelestialBody body)
+    {
+        return body.bodyType == BodyType.Asteroid || body.bodyType == BodyType.Comet;
     }
 
     public Vector3d CalculateSystemViewPosition(CelestialBody body, double time)
     {
-        return CalculateScaledPosition(body.GetAbsolutePosition(time));
+        Vector3d absolutePos = body.GetAbsolutePosition(time);
+        return absolutePos * linearDistanceMultiplier;
     }
 
-    public float CalculateBaseSystemViewRadius(CelestialBody body)
+    public float CalculateSystemViewRadius(CelestialBody body, float zLevel)
     {
-        double radiusKm = body.radiusKm;
-        double scaledRadius = sizeScaleMode == ScaleMode.Linear
-            ? radiusKm * linearSizeMultiplier
-            : Math.Log10(radiusKm + 1) * logSizeMultiplier;
+        float trueRadiusUnity = (float)(body.radiusKm * trueScaleMultiplier);
 
-        float finalScale = (float)(scaledRadius * 2);
-        if (body.bodyType == BodyType.Star) finalScale *= starSizeMultiplier;
+        float maxRadiusUnity = (float)(Math.Log10(body.radiusKm + 1) * maxLogSizeMultiplier);
+        if (maxRadiusUnity < minClickableSizeUnity) maxRadiusUnity = minClickableSizeUnity;
+        if (body.bodyType == BodyType.Star) maxRadiusUnity *= starMaxScaleMultiplier;
 
-        return finalScale / 2f;
+        float curveZ = planetSizeCurve.Evaluate(zLevel);
+        return Mathf.Lerp(trueRadiusUnity, maxRadiusUnity, curveZ);
     }
 
     public void SpawnVisualHexSphere(CelestialBody body)
@@ -125,7 +126,7 @@ public class SystemDisplayManager : MonoBehaviour
         CelestialBodyLink link = planetObj.AddComponent<CelestialBodyLink>();
         link.body = body;
 
-        if (body.parent != null)
+        if (body.parent != null && (!IsMinorBody(body) || drawTrailsForMinorBodies))
         {
             body.cachedOrbitPoints = KeplerMath.GetStaticOrbitPoints(body.orbit, trailResolution);
 
@@ -137,7 +138,6 @@ public class SystemDisplayManager : MonoBehaviour
             lr.startWidth = 1f;
             lr.endWidth = 1f;
             lr.loop = true;
-
             lr.startColor = defaultTrailColor;
             lr.endColor = defaultTrailColor;
 
@@ -145,33 +145,36 @@ public class SystemDisplayManager : MonoBehaviour
             {
                 for (int i = 0; i < trailResolution; i++)
                 {
-                    Vector3 visualPos = CalculateScaledPosition(body.cachedOrbitPoints[i]).ToVector3();
+                    Vector3 visualPos = (body.cachedOrbitPoints[i] * linearDistanceMultiplier).ToVector3();
                     lr.SetPosition(i, visualPos);
                 }
 
-                float baseRadius = CalculateBaseSystemViewRadius(body);
-                float logWidth = Mathf.Log10(baseRadius + 1f) * trailWidthMultiplier;
-                lr.widthMultiplier = Mathf.Clamp(logWidth, minTrailWidth, maxTrailWidth);
+                float maxRadius = CalculateSystemViewRadius(body, 1f);
+                lr.widthMultiplier = maxRadius * trailWidthMultiplier;
             }
         }
 
         body.visualObject = planetObj;
+
+        // Hide moons immediately if setting is false
+        if (body.bodyType == BodyType.Moon && !showMoonsInSystemView)
+        {
+            planetObj.SetActive(false);
+        }
     }
 
-    private void UpdateDynamicOrbitTrail(CelestialBody body, float baseRadius, double currentTime, float dynamicZoomFactor)
+    private void UpdateDynamicOrbitTrail(CelestialBody body, float currentVisualRadius, double currentTime)
     {
         LineRenderer lr = body.visualObject.GetComponent<LineRenderer>();
         if (lr == null) return;
 
-        float logWidth = Mathf.Log10(baseRadius + 1f) * trailWidthMultiplier;
-        lr.widthMultiplier = Mathf.Clamp(logWidth, minTrailWidth, maxTrailWidth) * dynamicZoomFactor;
-
+        lr.widthMultiplier = currentVisualRadius * trailWidthMultiplier;
         Vector3d parentPos = body.parent.GetAbsolutePosition(currentTime);
 
         for (int i = 0; i < trailResolution; i++)
         {
             Vector3d absolutePos = parentPos + body.cachedOrbitPoints[i];
-            Vector3 visualPos = CalculateScaledPosition(absolutePos).ToVector3();
+            Vector3 visualPos = (absolutePos * linearDistanceMultiplier).ToVector3();
             lr.SetPosition(i, visualPos);
         }
     }
@@ -187,47 +190,24 @@ public class SystemDisplayManager : MonoBehaviour
             bool show = false;
             bool highlight = false;
 
-            if (state == CameraState.SystemView)
+            if (state == CameraState.System || state == CameraState.Interstellar)
             {
-                if (focus == null)
-                {
-                    show = (body.bodyType != BodyType.Asteroid);
-                }
+                if (focus == null) show = !IsMinorBody(body);
                 else
                 {
-                    if (body == focus)
-                    {
-                        show = true;
-                        highlight = true;
-                    }
-                    else if (focus.bodyType == BodyType.Asteroid && body.orbitGroupName == focus.orbitGroupName)
-                    {
-                        show = true;
-                    }
-                    else if (body.bodyType != BodyType.Asteroid)
-                    {
-                        show = true;
-                    }
+                    if (body == focus) { show = true; highlight = true; }
+                    else if (focus.bodyType == BodyType.Asteroid && body.orbitGroupName == focus.orbitGroupName) show = true;
+                    else if (!IsMinorBody(body)) show = true;
                 }
             }
-            else if (state == CameraState.LocalView)
+            else
             {
-                if (body == focus)
-                {
-                    show = false;
-                }
-                else if (body.parent == focus)
-                {
-                    show = true;
-                }
-                else if (focus.parent != null && body.parent == focus.parent)
-                {
-                    show = true;
-                }
+                if (body == focus) show = false;
+                else if (body.parent == focus) show = true;
+                else if (focus.parent != null && body.parent == focus.parent) show = true;
             }
 
             lr.enabled = show;
-
             if (show)
             {
                 Color c = highlight ? highlightTrailColor : defaultTrailColor;

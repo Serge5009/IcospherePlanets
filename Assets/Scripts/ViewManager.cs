@@ -1,3 +1,4 @@
+// ViewManager.cs
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -24,6 +25,9 @@ public class ViewManager : MonoBehaviour
         if (currentLocalPlanet != null && currentFocusedBody != null && TimeManager.Instance != null)
         {
             UpdateProxyBodies(TimeManager.Instance.totalSeconds);
+
+            // The rotation now works perfectly because SystemDataGenerator is still running!
+            currentLocalPlanet.transform.rotation = Quaternion.Euler((float)currentFocusedBody.axialTilt, currentFocusedBody.currentRotationAngle, 0);
         }
     }
 
@@ -32,6 +36,8 @@ public class ViewManager : MonoBehaviour
         if (!body.isHighResReady) return;
 
         currentFocusedBody = body;
+
+        if (currentLocalPlanet != null) Destroy(currentLocalPlanet);
 
         currentLocalPlanet = new GameObject($"{body.name} (Local View)");
         currentLocalPlanet.transform.position = Vector3.zero;
@@ -42,10 +48,11 @@ public class ViewManager : MonoBehaviour
         Planet planet = currentLocalPlanet.AddComponent<Planet>();
         planet.InitializeFromData(body, body.localViewData, SystemDisplayManager.Instance.terrainMaterial, SystemDisplayManager.Instance.politicalMaterial);
 
-        SystemDisplayManager.Instance.gameObject.SetActive(false);
-        SpawnProxyBodies(body);
+        // FIX: Safely hide visual meshes without killing the math scripts
+        SystemDisplayManager.Instance.SetSystemViewActive(false);
 
-        SystemDisplayManager.Instance.UpdateTrailContext(body, CameraState.LocalView);
+        SpawnProxyBodies(body);
+        SystemDisplayManager.Instance.UpdateTrailContext(body, CameraState.PlanetaryHigh);
     }
 
     public void TransitionToSystemView()
@@ -55,9 +62,8 @@ public class ViewManager : MonoBehaviour
         foreach (var proxy in proxyBodies) Destroy(proxy.obj);
         proxyBodies.Clear();
 
-        SystemDisplayManager.Instance.gameObject.SetActive(true);
-
-        SystemDisplayManager.Instance.UpdateTrailContext(currentFocusedBody, CameraState.SystemView);
+        SystemDisplayManager.Instance.SetSystemViewActive(true);
+        SystemDisplayManager.Instance.UpdateTrailContext(currentFocusedBody, CameraState.System);
 
         currentFocusedBody = null;
     }
@@ -93,14 +99,14 @@ public class ViewManager : MonoBehaviour
     private void UpdateProxyBodies(double time)
     {
         Vector3 focusSysPos = SystemDisplayManager.Instance.CalculateSystemViewPosition(currentFocusedBody, time).ToVector3();
-        float focusSysRadius = SystemDisplayManager.Instance.CalculateBaseSystemViewRadius(currentFocusedBody);
+        float focusSysRadius = SystemDisplayManager.Instance.CalculateSystemViewRadius(currentFocusedBody, 0f);
 
         float scaleRatio = localViewUnityRadius / focusSysRadius;
 
         foreach (var proxy in proxyBodies)
         {
             Vector3 proxySysPos = SystemDisplayManager.Instance.CalculateSystemViewPosition(proxy.body, time).ToVector3();
-            float proxySysRadius = SystemDisplayManager.Instance.CalculateBaseSystemViewRadius(proxy.body);
+            float proxySysRadius = SystemDisplayManager.Instance.CalculateSystemViewRadius(proxy.body, 0f);
 
             Vector3 relativeSysPos = proxySysPos - focusSysPos;
             Vector3 localPos = relativeSysPos * scaleRatio;
@@ -116,6 +122,7 @@ public class ViewManager : MonoBehaviour
 
             proxy.obj.transform.position = localPos;
             proxy.obj.transform.localScale = new Vector3(localScale, localScale, localScale);
+            proxy.obj.transform.rotation = Quaternion.Euler((float)proxy.body.axialTilt, proxy.body.currentRotationAngle, 0);
         }
     }
 }

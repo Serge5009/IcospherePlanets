@@ -1,3 +1,4 @@
+// SystemDataGenerator.cs
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -21,10 +22,23 @@ public class SystemDataGenerator : MonoBehaviour
     private List<CelestialBody> mainPlanets = new List<CelestialBody>();
     public CelestialBody star { get; private set; }
 
+    public double systemEdgeKm { get; private set; }
+
     private void Awake()
     {
         if (Instance != null && Instance != this) Destroy(gameObject);
         else Instance = this;
+    }
+
+    // NEW: Always update rotation, even in Local View
+    private void Update()
+    {
+        if (TimeManager.Instance == null) return;
+        double time = TimeManager.Instance.totalSeconds;
+        foreach (var body in allBodies)
+        {
+            body.UpdateRotation(time);
+        }
     }
 
     public void GenerateData()
@@ -48,6 +62,34 @@ public class SystemDataGenerator : MonoBehaviour
         GenerateAccretionDisk(habInner, frostLine);
         GenerateMoons();
         GenerateComets();
+
+        CalculateSystemBoundaries();
+    }
+
+    private void CalculateSystemBoundaries()
+    {
+        double innermostDistance = double.MaxValue;
+        double outermostDistance = 0;
+
+        foreach (var body in allBodies)
+        {
+            if (body.parent == star)
+            {
+                double dist = body.orbit.semiMajorAxis;
+                if (dist < innermostDistance) innermostDistance = dist;
+                if (dist > outermostDistance) outermostDistance = dist;
+            }
+
+            if (body.bodyType == BodyType.RockyPlanet || body.bodyType == BodyType.GasGiant || body.bodyType == BodyType.IceGiant)
+                body.localSystemBoundaryKm = body.hillSphereRadiusKm;
+            else if (body.bodyType == BodyType.Moon)
+                body.localSystemBoundaryKm = body.parent.hillSphereRadiusKm;
+            else if (body.bodyType == BodyType.DwarfPlanet || body.bodyType == BodyType.Asteroid || body.bodyType == BodyType.Comet)
+                body.localSystemBoundaryKm = body.radiusKm * 100;
+        }
+
+        star.localSystemBoundaryKm = innermostDistance * 0.5;
+        systemEdgeKm = outermostDistance * 1.5;
     }
 
     private void SetThreadSafeParams(CelestialBody body)
@@ -81,7 +123,6 @@ public class SystemDataGenerator : MonoBehaviour
         double currentRockBudget = rockBudgetEarths;
         double currentGasBudget = gasBudgetEarths;
         int planetIndex = 1;
-
         bool mainBeltGenerated = false;
 
         for (int i = 0; i < orbitalDistancesAU.Count; i++)
@@ -128,7 +169,6 @@ public class SystemDataGenerator : MonoBehaviour
                 planetIndex++;
 
                 planet.axialTilt = UnityEngine.Random.Range(0f, 45f);
-
                 if (type == BodyType.GasGiant || type == BodyType.IceGiant) planet.rotationPeriodSeconds = UnityEngine.Random.Range(36000f, 60000f);
                 else planet.rotationPeriodSeconds = UnityEngine.Random.Range(72000f, 172800f);
 
@@ -170,52 +210,43 @@ public class SystemDataGenerator : MonoBehaviour
 
         int dwarfCount = UnityEngine.Random.Range(1, 3);
         double dwarfMassPool = totalMassKg * 0.40;
-
         for (int i = 0; i < dwarfCount; i++)
         {
             double mass = dwarfMassPool / dwarfCount;
             double radius = 6371 * Math.Pow(mass / AstroMath.EARTH_MASS_KG, 0.33) * densityMultiplier;
-
             CelestialBody dwarf = new CelestialBody($"{groupName} Alpha-{i + 1}", BodyType.DwarfPlanet, mass, radius);
             dwarf.orbitGroupName = groupName;
             dwarf.dataSubdivisions = CalculateSubdivisions(dwarf.radiusKm, maxDataSubdivisions);
             dwarf.rotationPeriodSeconds = UnityEngine.Random.Range(20000f, 60000f);
             SetThreadSafeParams(dwarf);
-
             SpawnBeltObject(dwarf, distanceAU, 0.05f, 5f);
         }
 
         int majorCount = UnityEngine.Random.Range(3, 6);
         double majorMassPool = totalMassKg * 0.30;
-
         for (int i = 0; i < majorCount; i++)
         {
             double mass = majorMassPool / majorCount;
             double radius = 6371 * Math.Pow(mass / AstroMath.EARTH_MASS_KG, 0.33) * densityMultiplier;
-
             CelestialBody major = new CelestialBody($"{groupName} Beta-{i + 1}", BodyType.Asteroid, mass, radius);
             major.orbitGroupName = groupName;
             major.dataSubdivisions = CalculateSubdivisions(major.radiusKm, maxDataSubdivisions);
             major.rotationPeriodSeconds = UnityEngine.Random.Range(10000f, 40000f);
             SetThreadSafeParams(major);
-
             SpawnBeltObject(major, distanceAU, 0.1f, 10f);
         }
 
         int minorCount = UnityEngine.Random.Range(5, 9);
         double minorMassPool = totalMassKg * 0.10;
-
         for (int i = 0; i < minorCount; i++)
         {
             double mass = minorMassPool / minorCount;
             double radius = 6371 * Math.Pow(mass / AstroMath.EARTH_MASS_KG, 0.33) * densityMultiplier;
-
             CelestialBody minor = new CelestialBody($"{groupName} Gamma-{i + 1}", BodyType.Asteroid, mass, radius);
             minor.orbitGroupName = groupName;
             minor.dataSubdivisions = CalculateSubdivisions(minor.radiusKm, maxDataSubdivisions);
             minor.rotationPeriodSeconds = UnityEngine.Random.Range(5000f, 20000f);
             SetThreadSafeParams(minor);
-
             SpawnBeltObject(minor, distanceAU, 0.15f, 15f);
         }
     }
@@ -223,7 +254,6 @@ public class SystemDataGenerator : MonoBehaviour
     private void SpawnBeltObject(CelestialBody body, double baseDistanceAU, float eccentricitySpread, float inclinationSpread)
     {
         double spreadAU = baseDistanceAU + UnityEngine.Random.Range(-0.2f, 0.2f);
-
         OrbitalParameters orbit = new OrbitalParameters
         {
             semiMajorAxis = spreadAU * AstroMath.AU_TO_KM,
@@ -233,7 +263,6 @@ public class SystemDataGenerator : MonoBehaviour
             argumentOfPeriapsis = UnityEngine.Random.Range(0f, 2f * Mathf.PI),
             meanAnomalyAtEpoch = UnityEngine.Random.Range(0f, 2f * Mathf.PI)
         };
-
         star.AddOrbitingBody(body, orbit);
         allBodies.Add(body);
     }
