@@ -46,9 +46,10 @@ public static class KeplerMath
 
     private static double SolveKeplerEquation(double M, double e)
     {
-        double E = M;
+        double E = (e > 0.8) ? M + e * Math.Sin(M) : M;
         double delta = 1;
-        int maxIterations = 15;
+
+        int maxIterations = (e > 0.8) ? 30 : 15;
         int i = 0;
 
         while (Math.Abs(delta) > 1e-7 && i < maxIterations)
@@ -70,23 +71,21 @@ public static class KeplerMath
         Vector3d[] points = new Vector3d[resolution];
         double step = (2 * Math.PI) / (resolution - 1);
 
+        double cosNode = Math.Cos(orbit.longitudeOfAscendingNode);
+        double sinNode = Math.Sin(orbit.longitudeOfAscendingNode);
+        double cosInc = Math.Cos(orbit.inclination);
+        double sinInc = Math.Sin(orbit.inclination);
+
+        double p = orbit.semiMajorAxis * (1 - orbit.eccentricity * orbit.eccentricity);
+
         for (int i = 0; i < resolution; i++)
         {
-            double E = i * step;
+            double v = i * step;
 
-            double v = 2 * Math.Atan2(
-                Math.Sqrt(1 + orbit.eccentricity) * Math.Sin(E / 2),
-                Math.Sqrt(1 - orbit.eccentricity) * Math.Cos(E / 2)
-            );
-
-            double r = orbit.semiMajorAxis * (1 - orbit.eccentricity * Math.Cos(E));
+            double r = p / (1 + orbit.eccentricity * Math.Cos(v));
 
             double cosVPlusOmega = Math.Cos(v + orbit.argumentOfPeriapsis);
             double sinVPlusOmega = Math.Sin(v + orbit.argumentOfPeriapsis);
-            double cosNode = Math.Cos(orbit.longitudeOfAscendingNode);
-            double sinNode = Math.Sin(orbit.longitudeOfAscendingNode);
-            double cosInc = Math.Cos(orbit.inclination);
-            double sinInc = Math.Sin(orbit.inclination);
 
             double x = r * (cosNode * cosVPlusOmega - sinNode * sinVPlusOmega * cosInc);
             double y = r * (sinNode * cosVPlusOmega + cosNode * sinVPlusOmega * cosInc);
