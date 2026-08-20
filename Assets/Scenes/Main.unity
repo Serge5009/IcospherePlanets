@@ -2277,6 +2277,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SystemMeshGenerator
   systemViewMaxSubdivisions: 4
+  bakedTemplates:
+  - {fileID: 11400000, guid: ccc5717ca87ab104283dd6779bfd8db3, type: 2}
+  - {fileID: 11400000, guid: 4455fad032814a1498a0f713af064824, type: 2}
+  - {fileID: 11400000, guid: dd1ebda1efe32a648a1f480fd7ccdefe, type: 2}
+  - {fileID: 11400000, guid: 6a3de5d4b5195844b8f87d9427b7130e, type: 2}
+  - {fileID: 11400000, guid: 9ad5a4ee9f7c13246b5e2048a0a758e3, type: 2}
+  - {fileID: 11400000, guid: 227c9304be535c44c880081e9e6b0c4a, type: 2}
+  - {fileID: 11400000, guid: 5a1a285069e72b6439df64ddab7fdd00, type: 2}
+  - {fileID: 11400000, guid: c09cd618c158cf1448e9fae96cbddff8, type: 2}
 --- !u!114 &1741213818
 MonoBehaviour:
   m_ObjectHideFlags: 0

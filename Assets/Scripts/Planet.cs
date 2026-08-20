@@ -14,18 +14,9 @@ public class Planet : MonoBehaviour
         this.bodyData = body;
         this.meshData = data;
 
-        Mesh mesh = new Mesh();
-        mesh.name = body.name + " Mesh";
-        mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-        mesh.vertices = data.vertices;
-        mesh.triangles = data.triangles;
-        mesh.uv2 = data.uv2;
-        mesh.uv3 = data.uv3;
-        mesh.RecalculateNormals();
-        mesh.RecalculateBounds();
-
         MeshFilter filter = gameObject.AddComponent<MeshFilter>();
-        filter.sharedMesh = mesh;
+        filter.sharedMesh = data.sharedMesh;
+
         terrainRenderer = gameObject.AddComponent<MeshRenderer>();
         terrainRenderer.sharedMaterial = terrainMat;
 
@@ -35,7 +26,8 @@ public class Planet : MonoBehaviour
         polObj.transform.localScale = Vector3.one * 1.002f;
 
         MeshFilter polFilter = polObj.AddComponent<MeshFilter>();
-        polFilter.sharedMesh = mesh;
+        polFilter.sharedMesh = data.sharedMesh;
+
         politicalRenderer = polObj.AddComponent<MeshRenderer>();
         politicalRenderer.sharedMaterial = polMat;
 
