@@ -53,6 +53,7 @@ public class SystemDataGenerator : MonoBehaviour
         float starMass = UnityEngine.Random.Range(starClass.minSolarMass, starClass.maxSolarMass);
         double starMassKg = starMass * AstroMath.SOLAR_MASS_KG;
         star = new CelestialBody(systemName + " Prime", BodyType.Star, starMassKg, 696340);
+        star.archetype = PlanetArchetype.GasGiant;
 
         star.dataSubdivisions = CalculateSubdivisions(star.radiusKm, maxGiantSubdivisions);
         star.rotationPeriodSeconds = 2592000;
@@ -204,6 +205,10 @@ public class SystemDataGenerator : MonoBehaviour
                 SetThreadSafeParams(planet);
                 AssignAccretionMaterials(planet, distanceAU, frostLine);
 
+                if (type == BodyType.GasGiant || type == BodyType.IceGiant) planet.archetype = PlanetArchetype.GasGiant;
+                else if (massEarths > 0.3) planet.archetype = PlanetArchetype.ActiveTerrestrial;
+                else planet.archetype = PlanetArchetype.DeadTerrestrial;
+
                 OrbitalParameters parameters = new OrbitalParameters
                 {
                     semiMajorAxis = distanceAU * AstroMath.AU_TO_KM,
@@ -246,6 +251,7 @@ public class SystemDataGenerator : MonoBehaviour
             dwarf.rotationPeriodSeconds = UnityEngine.Random.Range(20000f, 60000f);
             SetThreadSafeParams(dwarf);
             AssignAccretionMaterials(dwarf, distanceAU, frostLine);
+            dwarf.archetype = PlanetArchetype.Barren;
             SpawnBeltObject(dwarf, distanceAU, 0.05f, 5f);
         }
 
@@ -261,6 +267,7 @@ public class SystemDataGenerator : MonoBehaviour
             major.rotationPeriodSeconds = UnityEngine.Random.Range(10000f, 40000f);
             SetThreadSafeParams(major);
             AssignAccretionMaterials(major, distanceAU, frostLine);
+            major.archetype = PlanetArchetype.Barren;
             SpawnBeltObject(major, distanceAU, 0.1f, 10f);
         }
 
@@ -276,6 +283,7 @@ public class SystemDataGenerator : MonoBehaviour
             minor.rotationPeriodSeconds = UnityEngine.Random.Range(5000f, 20000f);
             SetThreadSafeParams(minor);
             AssignAccretionMaterials(minor, distanceAU, frostLine);
+            minor.archetype = PlanetArchetype.Barren;
             SpawnBeltObject(minor, distanceAU, 0.15f, 15f);
         }
     }
@@ -317,6 +325,9 @@ public class SystemDataGenerator : MonoBehaviour
                 double distanceAU = planet.orbit.semiMajorAxis / AstroMath.AU_TO_KM;
                 AssignAccretionMaterials(moon, distanceAU, frostLine);
 
+                if (moonMass / AstroMath.EARTH_MASS_KG > 0.1 && distanceAU > frostLine) moon.archetype = PlanetArchetype.ActiveIce;
+                else moon.archetype = PlanetArchetype.Barren;
+
                 double minDistance = planet.radiusKm * 3;
                 double maxDistance = planet.hillSphereRadiusKm * 0.4;
                 double moonDistKm = UnityEngine.Random.Range((float)minDistance, (float)maxDistance);
@@ -346,8 +357,9 @@ public class SystemDataGenerator : MonoBehaviour
             comet.dataSubdivisions = CalculateSubdivisions(comet.radiusKm, maxDataSubdivisions);
             comet.rotationPeriodSeconds = UnityEngine.Random.Range(10000f, 50000f);
             SetThreadSafeParams(comet);
-
             AssignAccretionMaterials(comet, frostLine * 5.0, frostLine);
+
+            comet.archetype = PlanetArchetype.Barren;
 
             OrbitalParameters parameters = new OrbitalParameters
             {

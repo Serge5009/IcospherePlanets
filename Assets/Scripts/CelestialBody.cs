@@ -9,6 +9,8 @@ public class CelestialBody
     public CelestialBody parent;
     public BodyType bodyType;
 
+    public PlanetArchetype archetype;
+
     public double massKg;
     public double massEarths;
     public double radiusKm;
@@ -66,14 +68,8 @@ public class CelestialBody
         body.parent = this;
         body.orbit = parameters;
         body.orbit.parentMu = this.standardGravitationalParameter;
-
         body.hillSphereRadiusKm = AstroMath.CalculateHillSphere(parameters.semiMajorAxis, body.massKg, this.massKg);
-
-        if (body.isTidallyLocked)
-        {
-            body.rotationPeriodSeconds = KeplerMath.GetOrbitalPeriod(parameters);
-        }
-
+        if (body.isTidallyLocked) body.rotationPeriodSeconds = KeplerMath.GetOrbitalPeriod(parameters);
         orbitingBodies.Add(body);
     }
 
@@ -81,33 +77,21 @@ public class CelestialBody
     {
         if (parent == null) return new Vector3d(0, 0, 0);
         if (time == lastCalculatedTime) return cachedAbsolutePosition;
-
         Vector3d localPos = KeplerMath.GetPositionAtTime(orbit, time);
         Vector3d absolutePos = parent.GetAbsolutePosition(time) + localPos;
-
         cachedAbsolutePosition = absolutePos;
         lastCalculatedTime = time;
-
         return absolutePos;
     }
 
     public void UpdateRotation(double time)
     {
         if (rotationPeriodSeconds <= 0) return;
-
         double rotations = time / rotationPeriodSeconds;
         double fractionalRotation = rotations - System.Math.Truncate(rotations);
         float newAngle = (float)(fractionalRotation * 360.0);
-
-        if (lastCalculatedTime != -1)
-        {
-            deltaRotationAngle = Mathf.DeltaAngle(currentRotationAngle, newAngle);
-        }
-        else
-        {
-            deltaRotationAngle = 0f;
-        }
-
+        if (lastCalculatedTime != -1) deltaRotationAngle = Mathf.DeltaAngle(currentRotationAngle, newAngle);
+        else deltaRotationAngle = 0f;
         currentRotationAngle = newAngle;
     }
 }
