@@ -39,10 +39,7 @@ public class SystemDataGenerator : MonoBehaviour
     {
         if (TimeManager.Instance == null) return;
         double time = TimeManager.Instance.totalSeconds;
-        foreach (var body in allBodies)
-        {
-            body.UpdateRotation(time);
-        }
+        foreach (var body in allBodies) body.UpdateRotation(time);
     }
 
     public void GenerateData()
@@ -122,6 +119,50 @@ public class SystemDataGenerator : MonoBehaviour
         {
             body.dominantBedrock = roll < 0.6 ? carbonaceousRock : (roll < 0.9 ? silicateRock : basaltRock);
             body.secondaryBedrock = body.dominantBedrock == carbonaceousRock ? silicateRock : carbonaceousRock;
+        }
+    }
+
+    private void CalculateCoreAndMagnetosphere(CelestialBody body)
+    {
+        if (body.bodyType == BodyType.Star || body.bodyType == BodyType.Comet || body.bodyType == BodyType.Asteroid)
+        {
+            body.coreMassFraction = 0;
+            body.coreTemperatureKelvin = 0;
+            body.isCoreActive = false;
+            body.magnetosphereStrength = 0;
+            return;
+        }
+
+        if (body.dominantBedrock == metallicRock) body.coreMassFraction = UnityEngine.Random.Range(0.5f, 0.75f);
+        else if (body.dominantBedrock == silicateRock || body.dominantBedrock == basaltRock) body.coreMassFraction = UnityEngine.Random.Range(0.25f, 0.4f);
+        else body.coreMassFraction = UnityEngine.Random.Range(0.05f, 0.15f);
+
+        float baseHeat = 6000f * Mathf.Pow((float)body.massEarths, 0.5f);
+
+        if (body.bodyType == BodyType.Moon && body.parent != null && body.parent.massEarths > 10)
+        {
+            double distanceKm = body.orbit.semiMajorAxis;
+            float tidalHeat = (float)(2000000.0 * body.parent.massEarths / (distanceKm * distanceKm));
+            baseHeat += tidalHeat;
+        }
+
+        body.coreTemperatureKelvin = Mathf.Clamp(baseHeat, 0f, 8000f);
+        body.isCoreActive = body.coreTemperatureKelvin > 1800f;
+
+        if (body.isCoreActive && body.rotationPeriodSeconds > 0)
+        {
+            float normalizedCore = (float)body.coreMassFraction / 0.32f;
+
+            float spinFactor = Mathf.Sqrt(86400f / (float)body.rotationPeriodSeconds);
+            spinFactor = Mathf.Clamp(spinFactor, 0f, 2.5f);
+
+            float massFactor = Mathf.Pow((float)body.massEarths, 0.33f);
+
+            body.magnetosphereStrength = normalizedCore * spinFactor * massFactor;
+        }
+        else
+        {
+            body.magnetosphereStrength = 0f;
         }
     }
 
@@ -205,8 +246,11 @@ public class SystemDataGenerator : MonoBehaviour
                 SetThreadSafeParams(planet);
                 AssignAccretionMaterials(planet, distanceAU, frostLine);
 
+                // NEW: Calculate Core
+                CalculateCoreAndMagnetosphere(planet);
+
                 if (type == BodyType.GasGiant || type == BodyType.IceGiant) planet.archetype = PlanetArchetype.GasGiant;
-                else if (massEarths > 0.3) planet.archetype = PlanetArchetype.ActiveTerrestrial;
+                else if (planet.isCoreActive) planet.archetype = PlanetArchetype.ActiveTerrestrial;
                 else planet.archetype = PlanetArchetype.DeadTerrestrial;
 
                 OrbitalParameters parameters = new OrbitalParameters
@@ -251,6 +295,7 @@ public class SystemDataGenerator : MonoBehaviour
             dwarf.rotationPeriodSeconds = UnityEngine.Random.Range(20000f, 60000f);
             SetThreadSafeParams(dwarf);
             AssignAccretionMaterials(dwarf, distanceAU, frostLine);
+            CalculateCoreAndMagnetosphere(dwarf);
             dwarf.archetype = PlanetArchetype.Barren;
             SpawnBeltObject(dwarf, distanceAU, 0.05f, 5f);
         }
@@ -267,6 +312,7 @@ public class SystemDataGenerator : MonoBehaviour
             major.rotationPeriodSeconds = UnityEngine.Random.Range(10000f, 40000f);
             SetThreadSafeParams(major);
             AssignAccretionMaterials(major, distanceAU, frostLine);
+            CalculateCoreAndMagnetosphere(major);
             major.archetype = PlanetArchetype.Barren;
             SpawnBeltObject(major, distanceAU, 0.1f, 10f);
         }
@@ -283,6 +329,7 @@ public class SystemDataGenerator : MonoBehaviour
             minor.rotationPeriodSeconds = UnityEngine.Random.Range(5000f, 20000f);
             SetThreadSafeParams(minor);
             AssignAccretionMaterials(minor, distanceAU, frostLine);
+            CalculateCoreAndMagnetosphere(minor);
             minor.archetype = PlanetArchetype.Barren;
             SpawnBeltObject(minor, distanceAU, 0.15f, 15f);
         }
@@ -325,9 +372,6 @@ public class SystemDataGenerator : MonoBehaviour
                 double distanceAU = planet.orbit.semiMajorAxis / AstroMath.AU_TO_KM;
                 AssignAccretionMaterials(moon, distanceAU, frostLine);
 
-                if (moonMass / AstroMath.EARTH_MASS_KG > 0.1 && distanceAU > frostLine) moon.archetype = PlanetArchetype.ActiveIce;
-                else moon.archetype = PlanetArchetype.Barren;
-
                 double minDistance = planet.radiusKm * 3;
                 double maxDistance = planet.hillSphereRadiusKm * 0.4;
                 double moonDistKm = UnityEngine.Random.Range((float)minDistance, (float)maxDistance);
@@ -343,6 +387,12 @@ public class SystemDataGenerator : MonoBehaviour
                 };
 
                 planet.AddOrbitingBody(moon, parameters);
+
+                CalculateCoreAndMagnetosphere(moon);
+
+                if (moonMass / AstroMath.EARTH_MASS_KG > 0.1 && distanceAU > frostLine && moon.isCoreActive) moon.archetype = PlanetArchetype.ActiveIce;
+                else moon.archetype = PlanetArchetype.Barren;
+
                 allBodies.Add(moon);
             }
         }
@@ -358,7 +408,7 @@ public class SystemDataGenerator : MonoBehaviour
             comet.rotationPeriodSeconds = UnityEngine.Random.Range(10000f, 50000f);
             SetThreadSafeParams(comet);
             AssignAccretionMaterials(comet, frostLine * 5.0, frostLine);
-
+            CalculateCoreAndMagnetosphere(comet);
             comet.archetype = PlanetArchetype.Barren;
 
             OrbitalParameters parameters = new OrbitalParameters

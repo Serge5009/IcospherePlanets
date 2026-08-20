@@ -46,6 +46,11 @@ public class CelestialBody
     public BedrockTemplate dominantBedrock;
     public BedrockTemplate secondaryBedrock;
 
+    public double coreMassFraction;
+    public float coreTemperatureKelvin;
+    public bool isCoreActive;
+    public float magnetosphereStrength;
+
     public Vector3d[] cachedOrbitPoints;
 
     private double lastCalculatedTime = -1;
