@@ -4,6 +4,9 @@ public class PlanetMeshData
 {
     public Mesh sharedMesh;
 
-    public Cell[] cells;
+    public CellTopology[] topologies;
+    public CellClimate[] climates;
+    public CellEconomy[] economies;
+
     public CellVisualData[] visualDataArray;
 }

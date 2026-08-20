@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 831b559f0b38ed54a827c9ba55ea9e69, type: 3}
+  m_Name: Ammonia
+  m_EditorClassIdentifier: Assembly-CSharp::LiquidTemplate
+  liquidId: 3
+  liquidName: Ammonia
+  baseFreezingPointKelvin: 195.4
+  baseBoilingPointKelvin: 239.81
+  evaporatesInto: {fileID: 11400000, guid: 951008581c03c324f8b1ffff9341db89, type: 2}
+  shallowColor: {r: 0.60747904, g: 0.3517711, b: 0.8018868, a: 1}
+  deepColor: {r: 0.38679248, g: 0.06020827, b: 0.35564256, a: 1}
+  iceColor: {r: 0.9622642, g: 0.7761659, b: 0.9346333, a: 1}

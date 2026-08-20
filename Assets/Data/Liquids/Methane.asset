@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 831b559f0b38ed54a827c9ba55ea9e69, type: 3}
+  m_Name: Methane
+  m_EditorClassIdentifier: Assembly-CSharp::LiquidTemplate
+  liquidId: 2
+  liquidName: Methane
+  baseFreezingPointKelvin: 90
+  baseBoilingPointKelvin: 110
+  evaporatesInto: {fileID: 11400000, guid: c5d9be51e959e624793cc7e8c19efd01, type: 2}
+  shallowColor: {r: 0.5613208, g: 1, b: 0.5613208, a: 1}
+  deepColor: {r: 0.05139729, g: 0.5188679, b: 0.3946345, a: 1}
+  iceColor: {r: 1, g: 0.9774215, b: 0.6556604, a: 1}

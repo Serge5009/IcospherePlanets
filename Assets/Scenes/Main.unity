@@ -2162,6 +2162,7 @@ GameObject:
   - component: {fileID: 1741213818}
   - component: {fileID: 1741213817}
   - component: {fileID: 1741213816}
+  - component: {fileID: 1741213820}
   m_Layer: 0
   m_Name: SystemGenerator
   m_TagString: Untagged
@@ -2317,6 +2318,41 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5ed051210e3825c47bedc618a7006799, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SolarSystemBootstrapper
+--- !u!114 &1741213820
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1741213813}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0c787e1976aaa884dbfd2a17b3da0d82, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DataLibrary
+  bedrocks:
+  - {fileID: 11400000, guid: 1b007a7a0e48da049843009321e2a63e, type: 2}
+  - {fileID: 11400000, guid: f917b560f5bca5e40846b7de46d2bb8c, type: 2}
+  - {fileID: 11400000, guid: 5ec18e18550de424db9b6c803b3d4b3e, type: 2}
+  - {fileID: 11400000, guid: e87e5c2abba611d47bb986d91d00ce60, type: 2}
+  - {fileID: 11400000, guid: 6de0ce89726d2234aaa16a38caba0d4c, type: 2}
+  liquids:
+  - {fileID: 11400000, guid: 177c9b8d0dd8d524ca68e04394c76231, type: 2}
+  - {fileID: 11400000, guid: cde1d204ff13c9d4fbc6280856b247b8, type: 2}
+  - {fileID: 11400000, guid: 4f87b6cb74a67034cade05b3981ec84e, type: 2}
+  gases:
+  - {fileID: 11400000, guid: 5ba4626302b751843a24607f5b477f61, type: 2}
+  - {fileID: 11400000, guid: c5d9be51e959e624793cc7e8c19efd01, type: 2}
+  - {fileID: 11400000, guid: 2a9d0a51218fce84e9925cab31a4d1c4, type: 2}
+  - {fileID: 11400000, guid: ed774da2537cd874e948a7be75800808, type: 2}
+  - {fileID: 11400000, guid: 951008581c03c324f8b1ffff9341db89, type: 2}
+  - {fileID: 11400000, guid: 49814a82f4612524dae5d5193e9884fa, type: 2}
+  resources:
+  - {fileID: 11400000, guid: 128b4c70b9888a64ebd18d15b5a96e09, type: 2}
+  - {fileID: 11400000, guid: 21de14e7cf1232a49885f61244cabd89, type: 2}
+  - {fileID: 11400000, guid: 085aaeb8900104141b383fe474cc5161, type: 2}
+  - {fileID: 11400000, guid: 835c3fd1758660646b38bbc9cf6d4860, type: 2}
+  - {fileID: 11400000, guid: 9727f670ff7d73a4a888bb60e668e009, type: 2}
 --- !u!1 &1873122170
 GameObject:
   m_ObjectHideFlags: 0

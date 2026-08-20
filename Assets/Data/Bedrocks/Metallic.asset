@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54c27f24f76741d468d698001154b2fe, type: 3}
+  m_Name: Metallic
+  m_EditorClassIdentifier: Assembly-CSharp::BedrockTemplate
+  bedrockId: 4
+  bedrockName: Metallic
+  meltingPointKelvin: 1800
+  baseColor: {r: 0.6037736, g: 0.338431, b: 0.2249911, a: 1}
+  potentialResources:
+  - resource: {fileID: 11400000, guid: 21de14e7cf1232a49885f61244cabd89, type: 2}
+    weight: 1
+  - resource: {fileID: 11400000, guid: 835c3fd1758660646b38bbc9cf6d4860, type: 2}
+    weight: 0.4

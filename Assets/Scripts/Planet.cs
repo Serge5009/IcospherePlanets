@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Runtime.InteropServices;
 
 public class Planet : MonoBehaviour
 {
@@ -31,7 +32,8 @@ public class Planet : MonoBehaviour
         politicalRenderer = polObj.AddComponent<MeshRenderer>();
         politicalRenderer.sharedMaterial = polMat;
 
-        visualBuffer = new ComputeBuffer(data.visualDataArray.Length, 36);
+        int stride = Marshal.SizeOf(typeof(CellVisualData));
+        visualBuffer = new ComputeBuffer(data.visualDataArray.Length, stride);
         visualBuffer.SetData(data.visualDataArray);
 
         MaterialPropertyBlock propBlock = new MaterialPropertyBlock();
