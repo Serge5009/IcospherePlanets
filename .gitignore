@@ -73,3 +73,7 @@ crashlytics-build.properties
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+Assets/Models/BakedSpheres/HexSphere_Mesh_Sub7.asset
+Assets/Models/BakedSpheres/HexSphere_Mesh_Sub7.asset.meta
+Assets/Models/BakedSpheres/HexSphere_Template_Sub7.asset
+Assets/Models/BakedSpheres/HexSphere_Template_Sub7.asset.meta
