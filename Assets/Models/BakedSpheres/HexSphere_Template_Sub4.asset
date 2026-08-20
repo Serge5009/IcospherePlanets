@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: HexSphere_Template_Sub4
   m_EditorClassIdentifier: Assembly-CSharp::HexSphereTemplate
   subdivisions: 4
-  bakedMesh: {fileID: 4300000, guid: 155ea3ac74de2704e8820f16ef59d2ce, type: 2}
+  bakedMesh: {fileID: 4300000, guid: 4184cba4d3756674cb302d45ebfddefc, type: 2}
   cellCenters:
   - {x: -0.5257311, y: 0.8506508, z: 0}
   - {x: 0.5257311, y: 0.8506508, z: 0}

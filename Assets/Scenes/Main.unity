@@ -2279,14 +2279,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SystemMeshGenerator
   systemViewMaxSubdivisions: 4
   bakedTemplates:
-  - {fileID: 11400000, guid: ccc5717ca87ab104283dd6779bfd8db3, type: 2}
-  - {fileID: 11400000, guid: 4455fad032814a1498a0f713af064824, type: 2}
-  - {fileID: 11400000, guid: dd1ebda1efe32a648a1f480fd7ccdefe, type: 2}
-  - {fileID: 11400000, guid: 6a3de5d4b5195844b8f87d9427b7130e, type: 2}
-  - {fileID: 11400000, guid: 9ad5a4ee9f7c13246b5e2048a0a758e3, type: 2}
-  - {fileID: 11400000, guid: 227c9304be535c44c880081e9e6b0c4a, type: 2}
-  - {fileID: 11400000, guid: 5a1a285069e72b6439df64ddab7fdd00, type: 2}
-  - {fileID: 11400000, guid: c09cd618c158cf1448e9fae96cbddff8, type: 2}
+  - {fileID: 11400000, guid: 57e02f436eeedb44bb7a2ee3fa733c71, type: 2}
+  - {fileID: 11400000, guid: 41a0bc0a15ba4bf46b383083524772e8, type: 2}
+  - {fileID: 11400000, guid: aa306357efc6e1647b29e1c6d326d15f, type: 2}
+  - {fileID: 11400000, guid: 2981a88027484af429b8b99dac04764e, type: 2}
+  - {fileID: 11400000, guid: 4a038b0ca1885ac409fec21205838fdd, type: 2}
+  - {fileID: 11400000, guid: dd87293e2b7a9754595beaa16e09e03e, type: 2}
+  - {fileID: 11400000, guid: 4419252574fc6404d9a6971908f1603b, type: 2}
+  - {fileID: 11400000, guid: 9a5790221d726bc4e832d9bc142da275, type: 2}
 --- !u!114 &1741213818
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2303,6 +2303,10 @@ MonoBehaviour:
   systemName: Sol
   rockBudgetEarths: 15
   gasBudgetEarths: 500
+  silicateRock: {fileID: 11400000, guid: 5ec18e18550de424db9b6c803b3d4b3e, type: 2}
+  basaltRock: {fileID: 11400000, guid: 1b007a7a0e48da049843009321e2a63e, type: 2}
+  carbonaceousRock: {fileID: 11400000, guid: f917b560f5bca5e40846b7de46d2bb8c, type: 2}
+  metallicRock: {fileID: 11400000, guid: e87e5c2abba611d47bb986d91d00ce60, type: 2}
   targetCellRadiusKm: 50
   maxDataSubdivisions: 7
   maxGiantSubdivisions: 5

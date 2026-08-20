@@ -29,11 +29,10 @@ public class SystemMeshGenerator : MonoBehaviour
         foreach (var body in bodies)
         {
             int renderSubs = Mathf.Min(body.dataSubdivisions, systemViewMaxSubdivisions);
-
             renderSubs = Mathf.Clamp(renderSubs, 0, bakedTemplates.Length - 1);
             HexSphereTemplate template = bakedTemplates[renderSubs];
 
-            body.systemViewData = PlanetGenerator.GeneratePlanetData(template, (float)body.radiusKm, body.bodyType, body.noiseScale, body.noiseOffset, body.waterLevel);
+            body.systemViewData = PlanetGenerator.GeneratePlanetData(template, body, body.noiseScale, body.noiseOffset, body.waterLevel);
 
             SystemDisplayManager.Instance.SpawnVisualHexSphere(body);
         }
@@ -46,7 +45,7 @@ public class SystemMeshGenerator : MonoBehaviour
                 int highResSubs = Mathf.Clamp(body.dataSubdivisions, 0, bakedTemplates.Length - 1);
                 HexSphereTemplate template = bakedTemplates[highResSubs];
 
-                body.localViewData = PlanetGenerator.GeneratePlanetData(template, (float)body.radiusKm, body.bodyType, body.noiseScale, body.noiseOffset, body.waterLevel);
+                body.localViewData = PlanetGenerator.GeneratePlanetData(template, body, body.noiseScale, body.noiseOffset, body.waterLevel);
                 body.isHighResReady = true;
             }));
         }

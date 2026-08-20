@@ -41,6 +41,9 @@ public class CelestialBody
     public float waterLevel;
     public bool isHighResReady = false;
 
+    public BedrockTemplate dominantBedrock;
+    public BedrockTemplate secondaryBedrock;
+
     public Vector3d[] cachedOrbitPoints;
 
     private double lastCalculatedTime = -1;

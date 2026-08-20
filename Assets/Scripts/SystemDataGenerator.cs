@@ -12,6 +12,12 @@ public class SystemDataGenerator : MonoBehaviour
     public float rockBudgetEarths = 15f;
     public float gasBudgetEarths = 500f;
 
+    [Header("Accretion Materials (Assign SOs)")]
+    public BedrockTemplate silicateRock;
+    public BedrockTemplate basaltRock;
+    public BedrockTemplate carbonaceousRock;
+    public BedrockTemplate metallicRock;
+
     [Header("Subdivision Math")]
     public float targetCellRadiusKm = 50f;
     public int maxDataSubdivisions = 7;
@@ -58,8 +64,8 @@ public class SystemDataGenerator : MonoBehaviour
         double frostLine = AstroMath.CalculateFrostLine(luminosity);
 
         GenerateAccretionDisk(habInner, frostLine);
-        GenerateMoons();
-        GenerateComets();
+        GenerateMoons(frostLine);
+        GenerateComets(frostLine);
 
         CalculateSystemBoundaries();
     }
@@ -97,6 +103,27 @@ public class SystemDataGenerator : MonoBehaviour
         body.waterLevel = (body.bodyType == BodyType.RockyPlanet && UnityEngine.Random.value > 0.5f) ? UnityEngine.Random.Range(8000f, 15000f) : 0f;
     }
 
+    private void AssignAccretionMaterials(CelestialBody body, double distanceAU, double frostLine)
+    {
+        double roll = UnityEngine.Random.value;
+
+        if (distanceAU < frostLine * 0.5)
+        {
+            body.dominantBedrock = roll < 0.4 ? metallicRock : (roll < 0.8 ? silicateRock : basaltRock);
+            body.secondaryBedrock = body.dominantBedrock == metallicRock ? silicateRock : metallicRock;
+        }
+        else if (distanceAU < frostLine * 1.2)
+        {
+            body.dominantBedrock = roll < 0.6 ? silicateRock : (roll < 0.9 ? basaltRock : metallicRock);
+            body.secondaryBedrock = body.dominantBedrock == silicateRock ? basaltRock : silicateRock;
+        }
+        else
+        {
+            body.dominantBedrock = roll < 0.6 ? carbonaceousRock : (roll < 0.9 ? silicateRock : basaltRock);
+            body.secondaryBedrock = body.dominantBedrock == carbonaceousRock ? silicateRock : carbonaceousRock;
+        }
+    }
+
     private int CalculateSubdivisions(double radiusKm, int hardCap)
     {
         float targetHexArea = 2.598076f * (targetCellRadiusKm * targetCellRadiusKm);
@@ -130,7 +157,7 @@ public class SystemDataGenerator : MonoBehaviour
             if (!mainBeltGenerated && distanceAU >= frostLine * 0.8 && distanceAU <= frostLine * 1.2)
             {
                 double beltMass = UnityEngine.Random.Range(0.001f, 0.01f);
-                GenerateAsteroidBelt("Main Belt", distanceAU, beltMass, false);
+                GenerateAsteroidBelt("Main Belt", distanceAU, frostLine, beltMass, false);
                 mainBeltGenerated = true;
                 continue;
             }
@@ -175,6 +202,7 @@ public class SystemDataGenerator : MonoBehaviour
                 int cap = (type == BodyType.GasGiant || type == BodyType.IceGiant) ? maxGiantSubdivisions : maxDataSubdivisions;
                 planet.dataSubdivisions = CalculateSubdivisions(planet.radiusKm, cap);
                 SetThreadSafeParams(planet);
+                AssignAccretionMaterials(planet, distanceAU, frostLine);
 
                 OrbitalParameters parameters = new OrbitalParameters
                 {
@@ -197,11 +225,11 @@ public class SystemDataGenerator : MonoBehaviour
             double lastPlanetAU = mainPlanets[mainPlanets.Count - 1].orbit.semiMajorAxis / AstroMath.AU_TO_KM;
             double kuiperDistance = lastPlanetAU * UnityEngine.Random.Range(1.3f, 1.6f);
             double kuiperMass = UnityEngine.Random.Range(0.1f, 1.0f);
-            GenerateAsteroidBelt("Kuiper Belt", kuiperDistance, kuiperMass, true);
+            GenerateAsteroidBelt("Kuiper Belt", kuiperDistance, frostLine, kuiperMass, true);
         }
     }
 
-    private void GenerateAsteroidBelt(string groupName, double distanceAU, double totalMassEarths, bool isIcy)
+    private void GenerateAsteroidBelt(string groupName, double distanceAU, double frostLine, double totalMassEarths, bool isIcy)
     {
         double totalMassKg = totalMassEarths * AstroMath.EARTH_MASS_KG;
         double densityMultiplier = isIcy ? 1.5 : 1.0;
@@ -217,6 +245,7 @@ public class SystemDataGenerator : MonoBehaviour
             dwarf.dataSubdivisions = CalculateSubdivisions(dwarf.radiusKm, maxDataSubdivisions);
             dwarf.rotationPeriodSeconds = UnityEngine.Random.Range(20000f, 60000f);
             SetThreadSafeParams(dwarf);
+            AssignAccretionMaterials(dwarf, distanceAU, frostLine);
             SpawnBeltObject(dwarf, distanceAU, 0.05f, 5f);
         }
 
@@ -231,6 +260,7 @@ public class SystemDataGenerator : MonoBehaviour
             major.dataSubdivisions = CalculateSubdivisions(major.radiusKm, maxDataSubdivisions);
             major.rotationPeriodSeconds = UnityEngine.Random.Range(10000f, 40000f);
             SetThreadSafeParams(major);
+            AssignAccretionMaterials(major, distanceAU, frostLine);
             SpawnBeltObject(major, distanceAU, 0.1f, 10f);
         }
 
@@ -245,6 +275,7 @@ public class SystemDataGenerator : MonoBehaviour
             minor.dataSubdivisions = CalculateSubdivisions(minor.radiusKm, maxDataSubdivisions);
             minor.rotationPeriodSeconds = UnityEngine.Random.Range(5000f, 20000f);
             SetThreadSafeParams(minor);
+            AssignAccretionMaterials(minor, distanceAU, frostLine);
             SpawnBeltObject(minor, distanceAU, 0.15f, 15f);
         }
     }
@@ -265,7 +296,7 @@ public class SystemDataGenerator : MonoBehaviour
         allBodies.Add(body);
     }
 
-    private void GenerateMoons()
+    private void GenerateMoons(double frostLine)
     {
         foreach (var planet in mainPlanets)
         {
@@ -282,6 +313,9 @@ public class SystemDataGenerator : MonoBehaviour
                 moon.isTidallyLocked = true;
                 moon.dataSubdivisions = CalculateSubdivisions(moon.radiusKm, maxDataSubdivisions);
                 SetThreadSafeParams(moon);
+
+                double distanceAU = planet.orbit.semiMajorAxis / AstroMath.AU_TO_KM;
+                AssignAccretionMaterials(moon, distanceAU, frostLine);
 
                 double minDistance = planet.radiusKm * 3;
                 double maxDistance = planet.hillSphereRadiusKm * 0.4;
@@ -303,7 +337,7 @@ public class SystemDataGenerator : MonoBehaviour
         }
     }
 
-    private void GenerateComets()
+    private void GenerateComets(double frostLine)
     {
         int cometCount = UnityEngine.Random.Range(2, 6);
         for (int i = 0; i < cometCount; i++)
@@ -312,6 +346,8 @@ public class SystemDataGenerator : MonoBehaviour
             comet.dataSubdivisions = CalculateSubdivisions(comet.radiusKm, maxDataSubdivisions);
             comet.rotationPeriodSeconds = UnityEngine.Random.Range(10000f, 50000f);
             SetThreadSafeParams(comet);
+
+            AssignAccretionMaterials(comet, frostLine * 5.0, frostLine);
 
             OrbitalParameters parameters = new OrbitalParameters
             {

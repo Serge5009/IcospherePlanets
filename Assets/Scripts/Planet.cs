@@ -32,6 +32,8 @@ public class Planet : MonoBehaviour
         politicalRenderer = polObj.AddComponent<MeshRenderer>();
         politicalRenderer.sharedMaterial = polMat;
 
+        politicalRenderer.enabled = false;
+
         int stride = Marshal.SizeOf(typeof(CellVisualData));
         visualBuffer = new ComputeBuffer(data.visualDataArray.Length, stride);
         visualBuffer.SetData(data.visualDataArray);
