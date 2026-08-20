@@ -15,6 +15,7 @@ public class CelestialBody
     public double massEarths;
     public double radiusKm;
     public double standardGravitationalParameter;
+    public double surfaceGravity;
 
     public double axialTilt;
     public double rotationPeriodSeconds;
@@ -51,6 +52,11 @@ public class CelestialBody
     public bool isCoreActive;
     public float magnetosphereStrength;
 
+    public Dictionary<byte, double> atmosphericGasesKg = new Dictionary<byte, double>();
+    public double surfacePressureAtm;
+    public float greenhouseHeatContribution;
+    public float toxicityLevel;
+
     public Vector3d[] cachedOrbitPoints;
 
     private double lastCalculatedTime = -1;
@@ -66,15 +72,22 @@ public class CelestialBody
         this.parent = parent;
         this.standardGravitationalParameter = AstroMath.GRAVITATIONAL_CONSTANT * massKg;
         this.orbitGroupName = "None";
+
+        double G_SI = 6.67430e-11;
+        double radiusMeters = radiusKm * 1000.0;
+        this.surfaceGravity = (G_SI * massKg) / (radiusMeters * radiusMeters);
     }
 
     public void AddOrbitingBody(CelestialBody body, OrbitalParameters parameters)
     {
         body.parent = this;
         body.orbit = parameters;
+
         body.orbit.parentMu = this.standardGravitationalParameter;
-        body.hillSphereRadiusKm = AstroMath.CalculateHillSphere(parameters.semiMajorAxis, body.massKg, this.massKg);
-        if (body.isTidallyLocked) body.rotationPeriodSeconds = KeplerMath.GetOrbitalPeriod(parameters);
+        body.hillSphereRadiusKm = AstroMath.CalculateHillSphere(body.orbit.semiMajorAxis, body.massKg, this.massKg);
+
+        if (body.isTidallyLocked) body.rotationPeriodSeconds = KeplerMath.GetOrbitalPeriod(body.orbit);
+
         orbitingBodies.Add(body);
     }
 

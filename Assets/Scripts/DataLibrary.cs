@@ -13,6 +13,8 @@ public class DataLibrary : MonoBehaviour
 
     private Dictionary<byte, BedrockTemplate> bedrockDict;
     private Dictionary<byte, LiquidTemplate> liquidDict;
+    private Dictionary<byte, GasTemplate> gasDict;
+    private Dictionary<byte, ResourceTemplate> resourceDict;
 
     private void Awake()
     {
@@ -32,6 +34,12 @@ public class DataLibrary : MonoBehaviour
 
         liquidDict = new Dictionary<byte, LiquidTemplate>();
         foreach (var l in liquids) if (l != null) liquidDict[l.liquidId] = l;
+
+        gasDict = new Dictionary<byte, GasTemplate>();
+        foreach (var g in gases) if (g != null) gasDict[g.gasId] = g;
+
+        resourceDict = new Dictionary<byte, ResourceTemplate>();
+        foreach (var r in resources) if (r != null) resourceDict[r.resourceId] = r;
     }
 
     public BedrockTemplate GetBedrock(byte id)
@@ -45,5 +53,17 @@ public class DataLibrary : MonoBehaviour
     {
         if (liquidDict.TryGetValue(id, out var template)) return template;
         return liquids.Length > 0 ? liquids[0] : null;
+    }
+
+    public GasTemplate GetGas(byte id)
+    {
+        if (gasDict.TryGetValue(id, out var template)) return template;
+        return gases.Length > 0 ? gases[0] : null;
+    }
+
+    public ResourceTemplate GetResource(byte id)
+    {
+        if (resourceDict.TryGetValue(id, out var template)) return template;
+        return resources.Length > 0 ? resources[0] : null;
     }
 }

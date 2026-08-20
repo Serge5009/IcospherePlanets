@@ -1,24 +1,15 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using System.Text;
 
 public class PlanetClickDebugger : MonoBehaviour
 {
-    private Camera mainCam;
-
-    private void Start()
-    {
-        mainCam = Camera.main;
-    }
-
     private void Update()
     {
-        if (Mouse.current == null) return;
-
         if (Mouse.current.leftButton.wasPressedThisFrame)
         {
             Vector2 mousePos = Mouse.current.position.ReadValue();
-
-            Ray ray = mainCam.ScreenPointToRay(mousePos);
+            Ray ray = Camera.main.ScreenPointToRay(mousePos);
 
             if (Physics.Raycast(ray, out RaycastHit hit))
             {
@@ -31,26 +22,36 @@ public class PlanetClickDebugger : MonoBehaviour
         }
     }
 
-    private void PrintPlanetStats(CelestialBody body)
+    private void PrintPlanetStats(CelestialBody b)
     {
-        string bedrockName = body.dominantBedrock != null ? body.dominantBedrock.bedrockName : "Unknown";
+        StringBuilder sb = new StringBuilder();
+        sb.AppendLine($"=== {b.name.ToUpper()} ({b.archetype}) ===");
 
-        Debug.Log($"=== PLANET SCAN: {body.name} ===");
-        Debug.Log($"Type: {body.bodyType} | Archetype: {body.archetype}");
-        Debug.Log($"Mass: {body.massEarths:F3} Earths | Radius: {body.radiusKm:F0} km");
+        sb.AppendLine($"[PHYSICS] M: {b.massEarths:F3}E | R: {b.radiusKm:F0}km | g: {b.surfaceGravity:F2}m/s² | Dist: {(b.orbit.semiMajorAxis / AstroMath.AU_TO_KM):F2}AU | Spin: {(b.rotationPeriodSeconds / 3600f):F1}h");
 
-        Debug.Log($"Distance from Star: {(body.orbit.semiMajorAxis / AstroMath.AU_TO_KM):F2} AU");
-        Debug.Log($"Rotation Period: {(body.rotationPeriodSeconds / 3600f):F1} Hours");
-        Debug.Log($"Dominant Bedrock: {bedrockName}");
-
-        if (body.bodyType != BodyType.Star && body.bodyType != BodyType.GasGiant)
+        string rock = b.dominantBedrock != null ? b.dominantBedrock.bedrockName : "None";
+        if (b.bodyType != BodyType.Star && b.bodyType != BodyType.GasGiant)
         {
-            Debug.Log($"--- CORE & MAGNETOSPHERE ---");
-            Debug.Log($"Core Mass Fraction: {(body.coreMassFraction * 100f):F1}%");
-            Debug.Log($"Core Temp: {body.coreTemperatureKelvin:F0} K");
-            Debug.Log($"Core Active: {body.isCoreActive}");
-            Debug.Log($"Magnetosphere Strength: {body.magnetosphereStrength:F2} (Earth = 1.0)");
+            sb.AppendLine($"[GEOLOGY] Bedrock: {rock} | Core: {(b.coreMassFraction * 100f):F0}% ({b.coreTemperatureKelvin:F0}K, {(b.isCoreActive ? "Active" : "Dead")}) | Mag-Shield: {b.magnetosphereStrength:F2}");
         }
-        Debug.Log($"============================");
+
+        if (b.surfacePressureAtm > 0)
+        {
+            sb.Append($"[ATMOS] P: {b.surfacePressureAtm:F3}atm | Heat+: {b.greenhouseHeatContribution:F1}K | Tox: {b.toxicityLevel:F2} | Gases: ");
+            foreach (var kvp in b.atmosphericGasesKg)
+            {
+                GasTemplate gas = DataLibrary.Instance.GetGas(kvp.Key);
+                string gasName = gas != null ? gas.gasName : $"ID{kvp.Key}";
+                double massMt = kvp.Value / 1e9;
+                sb.Append($"{gasName}: {massMt:F0}Mt, ");
+            }
+            sb.AppendLine();
+        }
+        else if (b.bodyType != BodyType.Star)
+        {
+            sb.AppendLine($"[ATMOS] Vacuum (0 atm)");
+        }
+
+        Debug.Log(sb.ToString());
     }
 }

@@ -152,18 +152,95 @@ public class SystemDataGenerator : MonoBehaviour
         if (body.isCoreActive && body.rotationPeriodSeconds > 0)
         {
             float normalizedCore = (float)body.coreMassFraction / 0.32f;
-
             float spinFactor = Mathf.Sqrt(86400f / (float)body.rotationPeriodSeconds);
             spinFactor = Mathf.Clamp(spinFactor, 0f, 2.5f);
-
             float massFactor = Mathf.Pow((float)body.massEarths, 0.33f);
-
             body.magnetosphereStrength = normalizedCore * spinFactor * massFactor;
         }
         else
         {
             body.magnetosphereStrength = 0f;
         }
+    }
+
+    private void CalculateAtmosphere(CelestialBody body, double distanceAU, double frostLine)
+    {
+        body.atmosphericGasesKg.Clear();
+        body.surfacePressureAtm = 0;
+        body.greenhouseHeatContribution = 0;
+        body.toxicityLevel = 0;
+
+        if (body.bodyType == BodyType.Star || body.bodyType == BodyType.Asteroid || body.bodyType == BodyType.Comet) return;
+
+        double baseAtmosphereMass = 5.15e18 * body.massEarths;
+
+        if (distanceAU > frostLine) baseAtmosphereMass *= UnityEngine.Random.Range(5f, 50f);
+
+        if (body.surfaceGravity < 4.0) baseAtmosphereMass *= 0.001;
+        if (body.surfaceGravity < 1.5) baseAtmosphereMass = 0;
+
+        if (body.magnetosphereStrength < 0.5f)
+        {
+            double stripFactor = Math.Max(0.01, body.magnetosphereStrength / 0.5f);
+            baseAtmosphereMass *= stripFactor;
+        }
+
+        if (baseAtmosphereMass > 0)
+        {
+            double co2Ratio = 0, n2Ratio = 0, ch4Ratio = 0;
+
+            if (distanceAU < frostLine)
+            {
+                co2Ratio = UnityEngine.Random.Range(0.5f, 0.95f);
+                n2Ratio = 1.0 - co2Ratio;
+            }
+            else
+            {
+                ch4Ratio = UnityEngine.Random.Range(0.4f, 0.8f);
+                n2Ratio = 1.0 - ch4Ratio;
+            }
+
+            if (co2Ratio > 0) body.atmosphericGasesKg[2] = baseAtmosphereMass * co2Ratio;
+            if (n2Ratio > 0) body.atmosphericGasesKg[3] = baseAtmosphereMass * n2Ratio;
+            if (ch4Ratio > 0) body.atmosphericGasesKg[5] = baseAtmosphereMass * ch4Ratio;
+
+            UpdateAtmosphericProperties(body);
+        }
+
+        if (body.surfacePressureAtm < 0.05)
+        {
+            body.waterLevel = 0f;
+            if (body.archetype == PlanetArchetype.ActiveTerrestrial)
+                body.archetype = PlanetArchetype.DeadTerrestrial;
+        }
+    }
+
+    public void UpdateAtmosphericProperties(CelestialBody body)
+    {
+        double totalMassKg = 0;
+        float totalGreenhouse = 0;
+        float totalToxicity = 0;
+
+        foreach (var kvp in body.atmosphericGasesKg)
+        {
+            totalMassKg += kvp.Value;
+
+            GasTemplate gas = DataLibrary.Instance.GetGas(kvp.Key);
+            if (gas != null)
+            {
+                float fraction = (float)(kvp.Value / Math.Max(1.0, totalMassKg));
+                totalGreenhouse += gas.greenhouseMultiplier * fraction;
+                totalToxicity += gas.toxicity * fraction;
+            }
+        }
+
+        double surfaceAreaM2 = 4.0 * Math.PI * Math.Pow(body.radiusKm * 1000.0, 2);
+        double pressurePascals = (totalMassKg * body.surfaceGravity) / surfaceAreaM2;
+
+        body.surfacePressureAtm = pressurePascals / 101325.0;
+
+        body.greenhouseHeatContribution = totalGreenhouse * (float)body.surfacePressureAtm * 30f;
+        body.toxicityLevel = totalToxicity;
     }
 
     private int CalculateSubdivisions(double radiusKm, int hardCap)
@@ -246,8 +323,8 @@ public class SystemDataGenerator : MonoBehaviour
                 SetThreadSafeParams(planet);
                 AssignAccretionMaterials(planet, distanceAU, frostLine);
 
-                // NEW: Calculate Core
                 CalculateCoreAndMagnetosphere(planet);
+                CalculateAtmosphere(planet, distanceAU, frostLine);
 
                 if (type == BodyType.GasGiant || type == BodyType.IceGiant) planet.archetype = PlanetArchetype.GasGiant;
                 else if (planet.isCoreActive) planet.archetype = PlanetArchetype.ActiveTerrestrial;
@@ -296,6 +373,7 @@ public class SystemDataGenerator : MonoBehaviour
             SetThreadSafeParams(dwarf);
             AssignAccretionMaterials(dwarf, distanceAU, frostLine);
             CalculateCoreAndMagnetosphere(dwarf);
+            CalculateAtmosphere(dwarf, distanceAU, frostLine);
             dwarf.archetype = PlanetArchetype.Barren;
             SpawnBeltObject(dwarf, distanceAU, 0.05f, 5f);
         }
@@ -313,6 +391,7 @@ public class SystemDataGenerator : MonoBehaviour
             SetThreadSafeParams(major);
             AssignAccretionMaterials(major, distanceAU, frostLine);
             CalculateCoreAndMagnetosphere(major);
+            CalculateAtmosphere(major, distanceAU, frostLine);
             major.archetype = PlanetArchetype.Barren;
             SpawnBeltObject(major, distanceAU, 0.1f, 10f);
         }
@@ -330,6 +409,7 @@ public class SystemDataGenerator : MonoBehaviour
             SetThreadSafeParams(minor);
             AssignAccretionMaterials(minor, distanceAU, frostLine);
             CalculateCoreAndMagnetosphere(minor);
+            CalculateAtmosphere(minor, distanceAU, frostLine);
             minor.archetype = PlanetArchetype.Barren;
             SpawnBeltObject(minor, distanceAU, 0.15f, 15f);
         }
@@ -389,6 +469,7 @@ public class SystemDataGenerator : MonoBehaviour
                 planet.AddOrbitingBody(moon, parameters);
 
                 CalculateCoreAndMagnetosphere(moon);
+                CalculateAtmosphere(moon, distanceAU, frostLine);
 
                 if (moonMass / AstroMath.EARTH_MASS_KG > 0.1 && distanceAU > frostLine && moon.isCoreActive) moon.archetype = PlanetArchetype.ActiveIce;
                 else moon.archetype = PlanetArchetype.Barren;
@@ -409,6 +490,7 @@ public class SystemDataGenerator : MonoBehaviour
             SetThreadSafeParams(comet);
             AssignAccretionMaterials(comet, frostLine * 5.0, frostLine);
             CalculateCoreAndMagnetosphere(comet);
+            CalculateAtmosphere(comet, frostLine * 5.0, frostLine);
             comet.archetype = PlanetArchetype.Barren;
 
             OrbitalParameters parameters = new OrbitalParameters
