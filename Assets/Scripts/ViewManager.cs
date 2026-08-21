@@ -63,7 +63,9 @@ public class ViewManager : MonoBehaviour
         currentLocalPlanet.transform.localScale = new Vector3(localScale, localScale, localScale);
 
         Planet planet = currentLocalPlanet.AddComponent<Planet>();
-        planet.InitializeFromData(body, body.localViewData, SystemDisplayManager.Instance.terrainMaterial, SystemDisplayManager.Instance.politicalMaterial);
+
+        // FIXED: Added 'true' for isLocalView
+        planet.InitializeFromData(body, body.localViewData, SystemDisplayManager.Instance.terrainMaterial, SystemDisplayManager.Instance.politicalMaterial, true);
 
         SystemDisplayManager.Instance.SetSystemViewActive(false);
         SpawnProxyBodies(body);
@@ -118,7 +120,9 @@ public class ViewManager : MonoBehaviour
         {
             GameObject proxy = new GameObject($"{body.name} (Proxy)");
             Planet p = proxy.AddComponent<Planet>();
-            p.InitializeFromData(body, body.systemViewData, SystemDisplayManager.Instance.terrainMaterial, SystemDisplayManager.Instance.politicalMaterial);
+
+            // FIXED: Added 'false' for isLocalView
+            p.InitializeFromData(body, body.systemViewData, SystemDisplayManager.Instance.terrainMaterial, SystemDisplayManager.Instance.politicalMaterial, false);
 
             SphereCollider collider = proxy.AddComponent<SphereCollider>();
             collider.radius = 1f;

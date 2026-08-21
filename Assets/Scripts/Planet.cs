@@ -10,7 +10,7 @@ public class Planet : MonoBehaviour
     public MeshRenderer terrainRenderer;
     public MeshRenderer politicalRenderer;
 
-    public void InitializeFromData(CelestialBody body, PlanetMeshData data, Material terrainMat, Material polMat)
+    public void InitializeFromData(CelestialBody body, PlanetMeshData data, Material terrainMat, Material polMat, bool isLocalView)
     {
         this.bodyData = body;
         this.meshData = data;
@@ -31,7 +31,6 @@ public class Planet : MonoBehaviour
 
         politicalRenderer = polObj.AddComponent<MeshRenderer>();
         politicalRenderer.sharedMaterial = polMat;
-
         politicalRenderer.enabled = false;
 
         int stride = Marshal.SizeOf(typeof(CellVisualData));
@@ -43,6 +42,48 @@ public class Planet : MonoBehaviour
 
         terrainRenderer.SetPropertyBlock(propBlock);
         politicalRenderer.SetPropertyBlock(propBlock);
+
+        if ((body.surfacePressureAtm >= 0.05 || body.bodyType == BodyType.Star) && SystemDisplayManager.Instance.atmosphereMaterial != null)
+        {
+            Mesh atmosMesh = isLocalView ? SystemDisplayManager.Instance.highResAtmosphereMesh : SystemDisplayManager.Instance.lowResAtmosphereMesh;
+
+            if (atmosMesh != null)
+            {
+                GameObject atmosObj = new GameObject("Atmosphere Shell");
+                atmosObj.transform.SetParent(transform);
+                atmosObj.transform.localPosition = Vector3.zero;
+
+                float scale = body.atmosphereVisualScale;
+                atmosObj.transform.localScale = new Vector3(scale, scale, scale);
+
+                MeshFilter atmosFilter = atmosObj.AddComponent<MeshFilter>();
+                atmosFilter.sharedMesh = atmosMesh;
+
+                MeshRenderer atmosRenderer = atmosObj.AddComponent<MeshRenderer>();
+                atmosRenderer.sharedMaterial = SystemDisplayManager.Instance.atmosphereMaterial;
+
+                MaterialPropertyBlock atmosBlock = new MaterialPropertyBlock();
+                atmosBlock.SetColor("_SkyColor", body.atmosphereSkyColor);
+                atmosBlock.SetColor("_CloudColor", body.atmosphereCloudColor);
+                atmosBlock.SetFloat("_BaseOpacity", body.atmosphereVisualOpacity);
+                atmosBlock.SetFloat("_CloudCoverage", body.atmosphereCloudCoverage);
+
+                atmosBlock.SetFloat("_CloudScale", body.atmosphereCloudScale);
+
+                atmosRenderer.SetPropertyBlock(atmosBlock);
+
+                body.atmosphereObject = atmosObj;
+
+                if (body.atmosphereVisualOpacity >= 0.99f)
+                {
+                    terrainRenderer.enabled = false;
+                }
+            }
+            else
+            {
+                Debug.LogWarning("Atmosphere mesh is missing in SystemDisplayManager!");
+            }
+        }
     }
 
     private void OnDestroy()

@@ -26,22 +26,23 @@ public class SystemDisplayManager : MonoBehaviour
     [Header("Orbit Trails")]
     public Material trailMaterial;
     public int trailResolution = 60;
-
-    [Tooltip("Multiplier for the logarithmic trail width")]
     public float trailWidthMultiplier = 0.2f;
     public float minTrailWidth = 0.02f;
     public float maxTrailWidth = 1.5f;
 
-    [Header("Trail Colors")]
     [ColorUsage(true, true)]
     public Color defaultTrailColor = new Color(1f, 1f, 1f, 0.2f);
-
     [ColorUsage(true, true)]
     public Color highlightTrailColor = new Color(0f, 1f, 0.5f, 1f);
 
     [Header("Visuals")]
     public Material terrainMaterial;
     public Material politicalMaterial;
+
+    [Header("Atmosphere Visuals")]
+    public Material atmosphereMaterial;
+    public Mesh lowResAtmosphereMesh;
+    public Mesh highResAtmosphereMesh;
 
     private void Awake()
     {
@@ -124,7 +125,7 @@ public class SystemDisplayManager : MonoBehaviour
         planetObj.transform.SetParent(this.transform);
 
         Planet planet = planetObj.AddComponent<Planet>();
-        planet.InitializeFromData(body, body.systemViewData, terrainMaterial, politicalMaterial);
+        planet.InitializeFromData(body, body.systemViewData, terrainMaterial, politicalMaterial, false);
 
         SphereCollider collider = planetObj.AddComponent<SphereCollider>();
         collider.radius = 1f;
@@ -139,9 +140,7 @@ public class SystemDisplayManager : MonoBehaviour
             LineRenderer lr = planetObj.AddComponent<LineRenderer>();
             lr.useWorldSpace = true;
             lr.positionCount = trailResolution;
-
             lr.material = new Material(trailMaterial != null ? trailMaterial : new Material(Shader.Find("Sprites/Default")));
-
             lr.loop = true;
 
             if (body.parent.bodyType == BodyType.Star)
@@ -201,28 +200,16 @@ public class SystemDisplayManager : MonoBehaviour
                     else if (!IsMinorBody(body)) show = true;
                 }
             }
-            else
-            {
-                show = false;
-            }
+            else show = false;
 
             lr.enabled = show;
             if (show)
             {
                 Color c = highlight ? highlightTrailColor : defaultTrailColor;
-
                 lr.startColor = c;
                 lr.endColor = c;
-
-                if (lr.material.HasProperty("_Color"))
-                {
-                    lr.material.SetColor("_Color", c);
-                }
-
-                if (lr.material.HasProperty("_EmissionColor"))
-                {
-                    lr.material.SetColor("_EmissionColor", c);
-                }
+                if (lr.material.HasProperty("_Color")) lr.material.SetColor("_Color", c);
+                if (lr.material.HasProperty("_EmissionColor")) lr.material.SetColor("_EmissionColor", c);
             }
         }
     }

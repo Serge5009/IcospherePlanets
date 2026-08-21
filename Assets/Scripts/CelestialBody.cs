@@ -57,6 +57,14 @@ public class CelestialBody
     public float greenhouseHeatContribution;
     public float toxicityLevel;
 
+    public Color atmosphereSkyColor;
+    public Color atmosphereCloudColor;
+    public float atmosphereVisualScale;
+    public float atmosphereVisualOpacity;
+    public float atmosphereCloudCoverage;
+    public float atmosphereCloudScale;
+    public GameObject atmosphereObject;
+
     public Vector3d[] cachedOrbitPoints;
 
     private double lastCalculatedTime = -1;
@@ -82,12 +90,9 @@ public class CelestialBody
     {
         body.parent = this;
         body.orbit = parameters;
-
         body.orbit.parentMu = this.standardGravitationalParameter;
         body.hillSphereRadiusKm = AstroMath.CalculateHillSphere(body.orbit.semiMajorAxis, body.massKg, this.massKg);
-
         if (body.isTidallyLocked) body.rotationPeriodSeconds = KeplerMath.GetOrbitalPeriod(body.orbit);
-
         orbitingBodies.Add(body);
     }
 

@@ -52,6 +52,16 @@ public class SystemDataGenerator : MonoBehaviour
         star = new CelestialBody(systemName + " Prime", BodyType.Star, starMassKg, 696340);
         star.archetype = PlanetArchetype.GasGiant;
 
+        Color starColor = starClass.starColor;
+        star.atmosphereSkyColor = new Color(starColor.r * 0.5f, starColor.g * 0.5f, starColor.b * 0.5f, 1f);
+        star.atmosphereCloudColor = new Color(starColor.r * 2.5f, starColor.g * 2.5f, starColor.b * 2.5f, 1f);
+        star.atmosphereVisualScale = 1.02f;
+        star.atmosphereVisualOpacity = 1.0f;
+        star.atmosphereCloudCoverage = UnityEngine.Random.Range(0.6f, 0.8f);
+        star.surfacePressureAtm = 100.0;
+
+        star.atmosphereCloudScale = Mathf.Pow(20f, UnityEngine.Random.value);
+
         star.dataSubdivisions = CalculateSubdivisions(star.radiusKm, maxGiantSubdivisions);
         star.rotationPeriodSeconds = 2592000;
         SetThreadSafeParams(star);
@@ -187,22 +197,39 @@ public class SystemDataGenerator : MonoBehaviour
 
         if (baseAtmosphereMass > 0)
         {
-            double co2Ratio = 0, n2Ratio = 0, ch4Ratio = 0;
+            double co2Ratio = 0, n2Ratio = 0, ch4Ratio = 0, h2oRatio = 0, smogRatio = 0;
 
-            if (distanceAU < frostLine)
+            if (body.bodyType == BodyType.GasGiant || body.bodyType == BodyType.IceGiant)
+            {
+                ch4Ratio = UnityEngine.Random.Range(0.1f, 0.8f);
+                smogRatio = UnityEngine.Random.Range(0.0f, 0.3f);
+                h2oRatio = UnityEngine.Random.Range(0.0f, 0.2f);
+                n2Ratio = 1.0 - (ch4Ratio + smogRatio + h2oRatio);
+            }
+            else if (distanceAU < frostLine)
             {
                 co2Ratio = UnityEngine.Random.Range(0.5f, 0.95f);
                 n2Ratio = 1.0 - co2Ratio;
+
+                if (body.waterLevel > 0)
+                {
+                    h2oRatio = UnityEngine.Random.Range(0.01f, 0.05f);
+                    co2Ratio -= h2oRatio;
+                }
             }
             else
             {
                 ch4Ratio = UnityEngine.Random.Range(0.4f, 0.8f);
                 n2Ratio = 1.0 - ch4Ratio;
+                smogRatio = UnityEngine.Random.Range(0.0f, 0.1f);
+                ch4Ratio -= smogRatio;
             }
 
             if (co2Ratio > 0) body.atmosphericGasesKg[2] = baseAtmosphereMass * co2Ratio;
             if (n2Ratio > 0) body.atmosphericGasesKg[3] = baseAtmosphereMass * n2Ratio;
+            if (h2oRatio > 0) body.atmosphericGasesKg[4] = baseAtmosphereMass * h2oRatio;
             if (ch4Ratio > 0) body.atmosphericGasesKg[5] = baseAtmosphereMass * ch4Ratio;
+            if (smogRatio > 0) body.atmosphericGasesKg[6] = baseAtmosphereMass * smogRatio;
 
             UpdateAtmosphericProperties(body);
         }
@@ -213,34 +240,80 @@ public class SystemDataGenerator : MonoBehaviour
             if (body.archetype == PlanetArchetype.ActiveTerrestrial)
                 body.archetype = PlanetArchetype.DeadTerrestrial;
         }
+
+        if (body.bodyType == BodyType.GasGiant || body.bodyType == BodyType.IceGiant)
+        {
+            body.atmosphereCloudScale = Mathf.Pow(20f, UnityEngine.Random.value);
+        }
+        else
+        {
+            body.atmosphereCloudScale = UnityEngine.Random.Range(2.5f, 10f);
+        }
     }
 
     public void UpdateAtmosphericProperties(CelestialBody body)
     {
         double totalMassKg = 0;
+        double vaporMassKg = 0;
         float totalGreenhouse = 0;
         float totalToxicity = 0;
+
+        Color blendedSky = Color.black;
+        Color blendedCloud = Color.black;
 
         foreach (var kvp in body.atmosphericGasesKg)
         {
             totalMassKg += kvp.Value;
+            GasTemplate gas = DataLibrary.Instance.GetGas(kvp.Key);
+            if (gas != null && gas.formsClouds) vaporMassKg += kvp.Value;
+        }
 
+        foreach (var kvp in body.atmosphericGasesKg)
+        {
             GasTemplate gas = DataLibrary.Instance.GetGas(kvp.Key);
             if (gas != null)
             {
-                float fraction = (float)(kvp.Value / Math.Max(1.0, totalMassKg));
-                totalGreenhouse += gas.greenhouseMultiplier * fraction;
-                totalToxicity += gas.toxicity * fraction;
+                float fractionOfTotal = (float)(kvp.Value / Math.Max(1.0, totalMassKg));
+                totalGreenhouse += gas.greenhouseMultiplier * fractionOfTotal;
+                totalToxicity += gas.toxicity * fractionOfTotal;
+
+                if (!gas.formsClouds) blendedSky += gas.skyColor * fractionOfTotal;
+
+                if (gas.formsClouds && vaporMassKg > 0)
+                {
+                    float fractionOfVapor = (float)(kvp.Value / vaporMassKg);
+                    blendedCloud += gas.cloudColor * fractionOfVapor;
+                }
             }
         }
 
         double surfaceAreaM2 = 4.0 * Math.PI * Math.Pow(body.radiusKm * 1000.0, 2);
         double pressurePascals = (totalMassKg * body.surfaceGravity) / surfaceAreaM2;
-
         body.surfacePressureAtm = pressurePascals / 101325.0;
+
+        double vaporPressureAtm = ((vaporMassKg * body.surfaceGravity) / surfaceAreaM2) / 101325.0;
 
         body.greenhouseHeatContribution = totalGreenhouse * (float)body.surfacePressureAtm * 30f;
         body.toxicityLevel = totalToxicity;
+
+        body.atmosphereSkyColor = new Color(Mathf.Clamp01(blendedSky.r), Mathf.Clamp01(blendedSky.g), Mathf.Clamp01(blendedSky.b), Mathf.Clamp01(blendedSky.a));
+        body.atmosphereCloudColor = new Color(Mathf.Clamp01(blendedCloud.r), Mathf.Clamp01(blendedCloud.g), Mathf.Clamp01(blendedCloud.b), Mathf.Clamp01(blendedCloud.a));
+
+        body.atmosphereVisualScale = 1.01f + Mathf.Log10(1f + (float)body.surfacePressureAtm) * 0.05f;
+        body.atmosphereVisualScale = Mathf.Clamp(body.atmosphereVisualScale, 1.01f, 1.15f);
+
+        float pressureFloat = (float)body.surfacePressureAtm;
+        body.atmosphereVisualOpacity = Mathf.Clamp01(Mathf.Sqrt(pressureFloat / 5.0f));
+
+        if (vaporPressureAtm > 0)
+        {
+            float rawCoverage = Mathf.Sqrt((float)vaporPressureAtm / 0.1f);
+            body.atmosphereCloudCoverage = Mathf.Clamp(rawCoverage, 0.1f, 0.8f);
+        }
+        else
+        {
+            body.atmosphereCloudCoverage = 0f;
+        }
     }
 
     private int CalculateSubdivisions(double radiusKm, int hardCap)

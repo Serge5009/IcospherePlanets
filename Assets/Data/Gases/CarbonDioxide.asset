@@ -16,4 +16,6 @@ MonoBehaviour:
   gasName: Carbon Dioxide
   greenhouseMultiplier: 1.5
   toxicity: 0.1
-  molarMass: 44
+  molarMass: 44.01
+  skyColor: {r: 0, g: 0.35655937, b: 0.9056604, a: 0.5}
+  cloudColor: {r: 1, g: 1, b: 1, a: 0.8}
