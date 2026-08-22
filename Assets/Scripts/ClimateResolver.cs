@@ -17,6 +17,7 @@ public struct PlanetClimateState
     public float boilingPoint;
     public bool isTidallyLocked;
     public Vector3 sunDirection;
+    public float waterLevel;
 }
 
 [BurstCompile]
@@ -46,19 +47,27 @@ public struct ClimateEquilibriumJob : IJobParallelFor
             localTemp = baseTemp * (0.8f + 0.4f * topo.baseInsolation);
         }
 
-        if (topo.altitude > 0) localTemp -= (topo.altitude / 1000f) * state.lapseRate;
+        float altitudeAboveSeaLevel = Mathf.Max(0f, topo.altitude - state.waterLevel);
+        if (altitudeAboveSeaLevel > 0)
+        {
+            localTemp -= (altitudeAboveSeaLevel / 1000f) * state.lapseRate;
+        }
 
         float blendFactor = Mathf.Clamp01(state.atmosphericPressure / 5.0f);
         localTemp = Mathf.Lerp(localTemp, baseTemp, blendFactor);
         clim.localTemperature = localTemp;
 
+        if (state.waterLevel <= 0f) clim.liquidDepth = 0f;
+
         if (clim.liquidDepth > 0) clim.moisture = 1.0f;
         else clim.moisture = topo.rainFactor * state.globalRainStrength;
 
-        if (localTemp < state.freezingPoint)
+        if (localTemp < state.freezingPoint && state.waterLevel > 0f && state.atmosphericPressure >= 0.05f)
         {
             float degreesBelow = state.freezingPoint - localTemp;
-            clim.snowDepth = clim.moisture * degreesBelow * 0.1f;
+
+            float baselineFrost = degreesBelow * 0.02f;
+            clim.snowDepth = Mathf.Max(baselineFrost, clim.moisture * degreesBelow * 0.1f);
 
             if (clim.liquidDepth > 0) clim.iceCover = 1.0f;
             else clim.iceCover = Mathf.Clamp01(clim.snowDepth);
@@ -164,14 +173,20 @@ public class ClimateResolver : MonoBehaviour
 
                     double distanceAU = body.orbit.semiMajorAxis / AstroMath.AU_TO_KM;
                     float blackbody = AstroMath.CalculateBlackbodyTemperature(starLuminosity, distanceAU, globalAlbedo);
-                    float dynamicLapseRate = (float)(body.surfaceGravity / 9.8) * 6.5f;
-
-                    float tempFactor = Mathf.Clamp01(blackbody / 288f);
-                    float pressureFactor = Mathf.Clamp01((float)body.surfacePressureAtm / 0.05f);
-                    float rainStrength = oceanFraction * tempFactor * pressureFactor;
 
                     float freezingPt = body.oceanLiquid != null ? body.oceanLiquid.baseFreezingPointKelvin : 273.15f;
                     float boilingPt = body.oceanLiquid != null ? body.oceanLiquid.baseBoilingPointKelvin : 373.15f;
+
+                    float baseTemp = blackbody + body.greenhouseHeatContribution;
+                    if (baseTemp > boilingPt && body.waterLevel > 0)
+                    {
+                        body.waterLevel = 0f;
+                    }
+
+                    float dynamicLapseRate = (float)(body.surfaceGravity / 9.8) * 6.5f;
+                    float tempFactor = Mathf.Clamp01(blackbody / 288f);
+                    float pressureFactor = Mathf.Clamp01((float)body.surfacePressureAtm / 0.05f);
+                    float rainStrength = oceanFraction * tempFactor * pressureFactor;
 
                     PlanetClimateState state = new PlanetClimateState
                     {
@@ -183,7 +198,8 @@ public class ClimateResolver : MonoBehaviour
                         freezingPoint = freezingPt,
                         boilingPoint = boilingPt,
                         isTidallyLocked = body.isTidallyLocked,
-                        sunDirection = Vector3.right
+                        sunDirection = Vector3.right,
+                        waterLevel = body.waterLevel
                     };
 
                     ClimateEquilibriumJob job = new ClimateEquilibriumJob

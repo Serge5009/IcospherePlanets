@@ -23,7 +23,7 @@ public class ActiveTerrestrialGenerator : IPlanetGenerator
         System.Random rng = new System.Random(body.name.GetHashCode());
         bool hasOceans = waterLevel > -5000f;
 
-        int plateCount = rng.Next(15, 30);
+        int plateCount = rng.Next(7, 16);
         TectonicPlate[] plates = new TectonicPlate[plateCount];
 
         for (int i = 0; i < plateCount; i++)
@@ -41,8 +41,8 @@ public class ActiveTerrestrialGenerator : IPlanetGenerator
             byte assignedId = useDominant ? body.dominantBedrockId : body.secondaryBedrockId;
             Color assignedColor = useDominant ? body.dominantBedrockColor : body.secondaryBedrockColor;
 
-            bool isOceanic = hasOceans && rng.NextDouble() > 0.40f;
-            float elevation = isOceanic ? waterLevel - rng.Next(2000, 5000) : waterLevel + rng.Next(1000, 4000);
+            bool isOceanic = hasOceans && rng.NextDouble() > 0.45f;
+            float elevation = isOceanic ? waterLevel - rng.Next(2500, 6000) : waterLevel + rng.Next(1500, 4000);
 
             plates[i] = new TectonicPlate
             {
@@ -62,11 +62,14 @@ public class ActiveTerrestrialGenerator : IPlanetGenerator
         {
             Vector3 localPos = cellCenters[i];
 
-            float warpStrength = 0.5f;
+            float warpModulator = GeneratorUtility.FBM(localPos, noiseScale * 0.4f, noiseOffset + 500f, 2);
+            float warpStrength = Mathf.Lerp(0.1f, 0.4f, warpModulator);
+
+            float warpFreq = noiseScale * 0.8f;
             Vector3 warpOffset = new Vector3(
-                GeneratorUtility.FBM(localPos, noiseScale * 1.2f, noiseOffset, 3),
-                GeneratorUtility.FBM(localPos, noiseScale * 1.2f, noiseOffset + 100f, 3),
-                GeneratorUtility.FBM(localPos, noiseScale * 1.2f, noiseOffset + 200f, 3)
+                GeneratorUtility.FBM(localPos, warpFreq, noiseOffset, 3),
+                GeneratorUtility.FBM(localPos, warpFreq, noiseOffset + 100f, 3),
+                GeneratorUtility.FBM(localPos, warpFreq, noiseOffset + 200f, 3)
             );
             warpOffset = (warpOffset - new Vector3(0.5f, 0.5f, 0.5f)) * 2f;
             Vector3 warpedPos = (localPos + warpOffset * warpStrength).normalized;
@@ -76,7 +79,7 @@ public class ActiveTerrestrialGenerator : IPlanetGenerator
 
             for (int p = 0; p < plateCount; p++)
             {
-                float dist = (warpedPos - plates[p].center).sqrMagnitude;
+                float dist = Vector3.Distance(warpedPos, plates[p].center);
                 if (dist < closestDist)
                 {
                     secondClosestDist = closestDist;
@@ -95,33 +98,38 @@ public class ActiveTerrestrialGenerator : IPlanetGenerator
             TectonicPlate secondary = plates[secondClosestPlateIdx];
 
             float borderDistance = secondClosestDist - closestDist;
-            float baseAlt = primary.baseElevation;
+
+            float shelfBlend = Mathf.SmoothStep(0.0f, 0.3f, borderDistance);
+            float baseAlt = Mathf.Lerp((primary.baseElevation + secondary.baseElevation) * 0.5f, primary.baseElevation, shelfBlend);
+
             float faultLineModifier = 0f;
 
-            if (borderDistance < 0.05f)
+            if (borderDistance < 0.15f)
             {
                 Vector3 borderDir = (secondary.center - primary.center).normalized;
-                float primaryApproach = Vector3.Dot(primary.driftVelocity, borderDir);
-                float secondaryApproach = Vector3.Dot(secondary.driftVelocity, -borderDir);
-                float convergence = primaryApproach + secondaryApproach;
+                float convergence = Mathf.Clamp(Vector3.Dot(primary.driftVelocity, borderDir) + Vector3.Dot(secondary.driftVelocity, -borderDir), -1f, 1f);
 
-                float borderIntensity = 1f - (borderDistance / 0.05f);
+                float borderIntensity = 1f - (borderDistance / 0.15f);
                 borderIntensity *= borderIntensity;
 
-                if (convergence > 0.2f)
+                if (convergence > 0.1f)
                 {
-                    if (!primary.isOceanic && !secondary.isOceanic) faultLineModifier = borderIntensity * 8000f * convergence;
-                    else if (primary.isOceanic && secondary.isOceanic) faultLineModifier = borderIntensity * 2500f * convergence;
-                    else faultLineModifier = primary.isOceanic ? borderIntensity * -5000f * convergence : borderIntensity * 5000f * convergence;
+                    if (!primary.isOceanic && !secondary.isOceanic)
+                        faultLineModifier = borderIntensity * 6000f * convergence;
+                    else if (primary.isOceanic && secondary.isOceanic)
+                        faultLineModifier = borderIntensity * 1500f * convergence;
+                    else
+                        faultLineModifier = primary.isOceanic ? borderIntensity * -4000f * convergence : borderIntensity * 5000f * convergence;
                 }
-                else if (convergence < -0.2f)
+                else if (convergence < -0.1f)
                 {
-                    if (!primary.isOceanic && !secondary.isOceanic) faultLineModifier = borderIntensity * -3000f * Mathf.Abs(convergence);
-                    else faultLineModifier = borderIntensity * -1500f;
+                    faultLineModifier = borderIntensity * -2000f * Mathf.Abs(convergence);
                 }
             }
 
-            float detailNoise = (GeneratorUtility.FBM(localPos, noiseScale * 4f, noiseOffset, 4) - 0.5f) * 600f;
+            float detailNoise = (GeneratorUtility.FBM(localPos, noiseScale * 3f, noiseOffset, 4) - 0.5f) * 1200f;
+            detailNoise *= shelfBlend;
+
             baseAlt += primary.isOceanic ? Mathf.Max(0, detailNoise) : Mathf.Min(0, detailNoise);
 
             float rawAlt = baseAlt + faultLineModifier;
@@ -137,11 +145,22 @@ public class ActiveTerrestrialGenerator : IPlanetGenerator
             Vector3 localPos = cellCenters[i];
             float finalAltitude = rawAltitudes[i] - minAltitude;
 
+            if (hasOceans)
+            {
+                float distToWater = finalAltitude - shiftedWaterLevel;
+                if (Mathf.Abs(distToWater) < 800f)
+                {
+                    float t = Mathf.Abs(distToWater) / 800f;
+                    t = t * t * (3f - 2f * t);
+                    finalAltitude = Mathf.Lerp(shiftedWaterLevel + Mathf.Sign(distToWater) * 10f, finalAltitude, t);
+                }
+            }
+
             float closestDist = float.MaxValue;
             int closestPlateIdx = 0;
             for (int p = 0; p < plateCount; p++)
             {
-                float dist = (localPos - plates[p].center).sqrMagnitude;
+                float dist = Vector3.Distance(localPos, plates[p].center);
                 if (dist < closestDist) { closestDist = dist; closestPlateIdx = p; }
             }
             TectonicPlate primary = plates[closestPlateIdx];
@@ -149,7 +168,6 @@ public class ActiveTerrestrialGenerator : IPlanetGenerator
             float cosLat = Mathf.Sqrt(1f - localPos.y * localPos.y);
             float sinLat = Mathf.Abs(localPos.y);
             float tiltRatio = Mathf.Clamp01((float)body.axialTilt / 90f);
-
             float insolation = Mathf.Lerp(cosLat, sinLat, tiltRatio);
 
             float baseRain = 0f;
