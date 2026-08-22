@@ -1,4 +1,6 @@
+using UnityEngine;
+
 public interface IPlanetGenerator
 {
-    PlanetMeshData Generate(HexSphereTemplate template, CelestialBody body, float noiseScale, float noiseOffset, float waterLevel);
+    PlanetMeshData Generate(Mesh mesh, Vector3[] cellCenters, CelestialBody body, float noiseScale, float noiseOffset, float waterLevel);
 }

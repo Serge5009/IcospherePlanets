@@ -2,16 +2,16 @@ using UnityEngine;
 
 public class GasGiantGenerator : IPlanetGenerator
 {
-    public PlanetMeshData Generate(HexSphereTemplate template, CelestialBody body, float noiseScale, float noiseOffset, float waterLevel)
+    public PlanetMeshData Generate(Mesh mesh, Vector3[] cellCenters, CelestialBody body, float noiseScale, float noiseOffset, float waterLevel)
     {
         PlanetMeshData data = new PlanetMeshData();
-        data.sharedMesh = template.bakedMesh;
-        int cellCount = template.cellCenters.Length;
+        data.sharedMesh = mesh;
+        int cellCount = cellCenters.Length;
         GeneratorUtility.InitializeDataArrays(data, cellCount);
 
         for (int i = 0; i < cellCount; i++)
         {
-            Vector3 localPos = template.cellCenters[i];
+            Vector3 localPos = cellCenters[i];
 
             data.topologies[i] = new CellTopology { id = i, localPosition = localPos, altitude = 0f, bedrockId = 0, windNeighborId = -1 };
             data.climates[i] = new CellClimate { localTemperature = 150f, storedHeat = 1000f, moisture = 0f, iceCover = 0f, liquidDepth = 0f, biomass = 0f };

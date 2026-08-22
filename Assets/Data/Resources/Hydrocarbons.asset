@@ -10,8 +10,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ffff14ce1b9bd104db000c32c39baf16, type: 3}
-  m_Name: Metals
+  m_Name: Hydrocarbons
   m_EditorClassIdentifier: Assembly-CSharp::ResourceTemplate
-  resourceId: 1
-  resourceName: Base Metals
-  baseValue: 5
+  resourceId: 7
+  resourceName: Hydrocarbons
+  baseValue: 1

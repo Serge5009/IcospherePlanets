@@ -10,14 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 54c27f24f76741d468d698001154b2fe, type: 3}
-  m_Name: Granite
+  m_Name: Granodiorite
   m_EditorClassIdentifier: Assembly-CSharp::BedrockTemplate
-  bedrockId: 1
-  bedrockName: Granite
-  meltingPointKelvin: 1473.15
-  baseColor: {r: 0.5019608, g: 0.42908564, b: 0.38431373, a: 1}
+  bedrockId: 4
+  bedrockName: Granodiorite
+  meltingPointKelvin: 950
+  baseColor: {r: 0.5660378, g: 0.5660378, b: 0.5660378, a: 1}
   potentialResources:
   - resource: {fileID: 11400000, guid: 9727f670ff7d73a4a888bb60e668e009, type: 2}
-    weight: 1
+    weight: 0.7
   - resource: {fileID: 11400000, guid: 21de14e7cf1232a49885f61244cabd89, type: 2}
-    weight: 0.2
+    weight: 0.1
+  - resource: {fileID: 11400000, guid: 835c3fd1758660646b38bbc9cf6d4860, type: 2}
+    weight: 0.02
+  - resource: {fileID: 11400000, guid: 128b4c70b9888a64ebd18d15b5a96e09, type: 2}
+    weight: 0.01

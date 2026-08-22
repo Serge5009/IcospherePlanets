@@ -85,12 +85,14 @@ Material:
     - _AddPrecomputedVelocity: 0
     - _AlphaClip: 0
     - _AlphaToMask: 0
+    - _BaseOpacity: 0.08
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
-    - _CloudScale: 10
+    - _CloudCoverage: 0.03
+    - _CloudScale: 20.2
     - _CloudSpeed: 0.05
     - _Cull: 2
     - _Cutoff: 0.5
@@ -120,10 +122,10 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
-    - _CloudColor: {r: 1, g: 1, b: 1, a: 0.7843137}
+    - _CloudColor: {r: 0, g: 0, b: 0, a: 2}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _SkyColor: {r: 0.38416696, g: 0.6885973, b: 0.9150943, a: 0.3137255}
+    - _SkyColor: {r: 0.8962264, g: 0.054957304, b: 0.08540176, a: 1.3239634}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

@@ -10,16 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 54c27f24f76741d468d698001154b2fe, type: 3}
-  m_Name: SaltFlats
+  m_Name: Cryoclastic_Breccia
   m_EditorClassIdentifier: Assembly-CSharp::BedrockTemplate
-  bedrockId: 5
-  bedrockName: Salt Flats
-  meltingPointKelvin: 1073
-  baseColor: {r: 0.9747741, g: 0.9811321, b: 0.83766466, a: 1}
+  bedrockId: 10
+  bedrockName: Cryoclastic Breccia
+  meltingPointKelvin: 1100
+  baseColor: {r: 0.1771983, g: 0.20754719, b: 0.17983735, a: 1}
   potentialResources:
-  - resource: {fileID: 11400000, guid: 085aaeb8900104141b383fe474cc5161, type: 2}
+  - resource: {fileID: 11400000, guid: 9727f670ff7d73a4a888bb60e668e009, type: 2}
     weight: 0.5
-  - resource: {fileID: 11400000, guid: 835c3fd1758660646b38bbc9cf6d4860, type: 2}
-    weight: 0.1
-  - resource: {fileID: 11400000, guid: 128b4c70b9888a64ebd18d15b5a96e09, type: 2}
+  - resource: {fileID: 11400000, guid: 21de14e7cf1232a49885f61244cabd89, type: 2}
+    weight: 0.05
+  - resource: {fileID: 11400000, guid: 602224141a8634444838d49cd5839bf3, type: 2}
     weight: 0.05

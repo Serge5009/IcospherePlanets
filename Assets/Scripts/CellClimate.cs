@@ -4,6 +4,7 @@ public struct CellClimate
     public float storedHeat;
 
     public float moisture;
+    public float snowDepth;
 
     public float iceCover;
     public float liquidDepth;

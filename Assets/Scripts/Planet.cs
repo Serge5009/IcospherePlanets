@@ -10,6 +10,8 @@ public class Planet : MonoBehaviour
     public MeshRenderer terrainRenderer;
     public MeshRenderer politicalRenderer;
 
+    private int currentHoveredCellId = -1;
+
     public void InitializeFromData(CelestialBody body, PlanetMeshData data, Material terrainMat, Material polMat, bool isLocalView)
     {
         this.bodyData = body;
@@ -31,7 +33,19 @@ public class Planet : MonoBehaviour
 
         politicalRenderer = polObj.AddComponent<MeshRenderer>();
         politicalRenderer.sharedMaterial = polMat;
-        politicalRenderer.enabled = false;
+
+        politicalRenderer.enabled = isLocalView;
+
+        SphereCollider sc = gameObject.GetComponent<SphereCollider>();
+        if (sc == null) sc = gameObject.AddComponent<SphereCollider>();
+        sc.radius = 1f;
+
+        CelestialBodyLink link = gameObject.GetComponent<CelestialBodyLink>();
+        if (link == null)
+        {
+            link = gameObject.AddComponent<CelestialBodyLink>();
+            link.body = body;
+        }
 
         int stride = Marshal.SizeOf(typeof(CellVisualData));
         visualBuffer = new ComputeBuffer(data.visualDataArray.Length, stride);
@@ -67,9 +81,7 @@ public class Planet : MonoBehaviour
                 atmosBlock.SetColor("_CloudColor", body.atmosphereCloudColor);
                 atmosBlock.SetFloat("_BaseOpacity", body.atmosphereVisualOpacity);
                 atmosBlock.SetFloat("_CloudCoverage", body.atmosphereCloudCoverage);
-
                 atmosBlock.SetFloat("_CloudScale", body.atmosphereCloudScale);
-
                 atmosRenderer.SetPropertyBlock(atmosBlock);
 
                 body.atmosphereObject = atmosObj;
@@ -79,10 +91,32 @@ public class Planet : MonoBehaviour
                     terrainRenderer.enabled = false;
                 }
             }
-            else
-            {
-                Debug.LogWarning("Atmosphere mesh is missing in SystemDisplayManager!");
-            }
+        }
+    }
+
+    public void SetHoveredCell(int cellId)
+    {
+        if (currentHoveredCellId == cellId) return;
+
+        if (currentHoveredCellId >= 0 && currentHoveredCellId < meshData.visualDataArray.Length)
+        {
+            meshData.visualDataArray[currentHoveredCellId].isHovered = 0;
+        }
+
+        currentHoveredCellId = cellId;
+        if (currentHoveredCellId >= 0 && currentHoveredCellId < meshData.visualDataArray.Length)
+        {
+            meshData.visualDataArray[currentHoveredCellId].isHovered = 1;
+        }
+
+        UpdateVisualBuffer();
+    }
+
+    public void UpdateVisualBuffer()
+    {
+        if (visualBuffer != null && meshData != null && meshData.visualDataArray != null)
+        {
+            visualBuffer.SetData(meshData.visualDataArray);
         }
     }
 

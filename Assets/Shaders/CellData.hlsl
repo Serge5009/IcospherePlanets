@@ -6,10 +6,12 @@ struct CellVisualData
     float4 bedrockColor;
     float4 liquidColor;
     float4 surfaceData;
+    float4 politicalColor;
     int isHovered;
-    float padding1;
-    float padding2;
-    float padding3;
+    float iceColorR;
+    float iceColorG;
+    float iceColorB;
+    float padding;
 };
 
 StructuredBuffer<CellVisualData> _CellVisualData;
@@ -26,15 +28,25 @@ void GetCellData_float(float2 encodedId, out float4 terrainColor, out float4 cel
     CellVisualData data = _CellVisualData[id];
     
     float3 finalColor = data.bedrockColor.rgb;
-    
     float hasLiquid = step(0.01, data.surfaceData.z);
     finalColor = lerp(finalColor, data.liquidColor.rgb, hasLiquid);
     
-    finalColor = lerp(finalColor, float3(1, 1, 1), data.surfaceData.x);
-    finalColor = lerp(finalColor, float3(0.2, 0.6, 0.2), data.surfaceData.y);
+    float3 biomassColor = float3(0.15, 0.45, 0.15);
+    finalColor = lerp(finalColor, biomassColor, data.surfaceData.y);
+
+    float3 iceColor = float3(data.iceColorR, data.iceColorG, data.iceColorB);
+    finalColor = lerp(finalColor, iceColor, data.surfaceData.x);
     
     terrainColor = float4(finalColor, 1.0);
-    cellColor = float4(0.0, 0.0, 0.0, 0.0);
+    
+    float4 polColor = data.politicalColor;
+    
+    if (data.isHovered > 0)
+    {
+        polColor = float4(1.0, 1.0, 1.0, 0.4);
+    }
+    
+    cellColor = polColor;
     isHovered = (float) data.isHovered;
 #endif
 }

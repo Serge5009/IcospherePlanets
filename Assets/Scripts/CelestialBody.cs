@@ -38,6 +38,7 @@ public class CelestialBody
 
     public PlanetMeshData systemViewData;
     public PlanetMeshData localViewData;
+    public int[] lowToHighMap;
 
     public float noiseScale;
     public float noiseOffset;
@@ -46,6 +47,13 @@ public class CelestialBody
 
     public BedrockTemplate dominantBedrock;
     public BedrockTemplate secondaryBedrock;
+    public LiquidTemplate oceanLiquid;
+
+    public byte dominantBedrockId;
+    public Color dominantBedrockColor;
+    public byte secondaryBedrockId;
+    public Color secondaryBedrockColor;
+    public Color oceanColor;
 
     public double coreMassFraction;
     public float coreTemperatureKelvin;

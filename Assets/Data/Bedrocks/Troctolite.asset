@@ -10,14 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 54c27f24f76741d468d698001154b2fe, type: 3}
-  m_Name: Carbonacious
+  m_Name: Troctolite
   m_EditorClassIdentifier: Assembly-CSharp::BedrockTemplate
-  bedrockId: 3
-  bedrockName: Carbonacious
-  meltingPointKelvin: 1600
-  baseColor: {r: 0.11320752, g: 0.11320752, b: 0.11320752, a: 1}
+  bedrockId: 11
+  bedrockName: Cryoclastic Breccia
+  meltingPointKelvin: 1200
+  baseColor: {r: 0.17837928, g: 0.26415092, b: 0.17817727, a: 1}
   potentialResources:
-  - resource: {fileID: 11400000, guid: 085aaeb8900104141b383fe474cc5161, type: 2}
-    weight: 1
   - resource: {fileID: 11400000, guid: 9727f670ff7d73a4a888bb60e668e009, type: 2}
-    weight: 0.4
+    weight: 0.6
+  - resource: {fileID: 11400000, guid: 21de14e7cf1232a49885f61244cabd89, type: 2}
+    weight: 0.25
+  - resource: {fileID: 11400000, guid: 494747958bbdeed459d3e0ffdae8b70f, type: 2}
+    weight: 0.05

@@ -10,16 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 54c27f24f76741d468d698001154b2fe, type: 3}
-  m_Name: Basalt
+  m_Name: Komatiite
   m_EditorClassIdentifier: Assembly-CSharp::BedrockTemplate
-  bedrockId: 2
-  bedrockName: Basalt
-  meltingPointKelvin: 1273.15
-  baseColor: {r: 0.2924528, g: 0.28284234, b: 0.27727836, a: 1}
+  bedrockId: 1
+  bedrockName: Komatiite
+  meltingPointKelvin: 1673.15
+  baseColor: {r: 0.1981132, g: 0.17464213, b: 0.1728818, a: 1}
   potentialResources:
+  - resource: {fileID: 11400000, guid: 9727f670ff7d73a4a888bb60e668e009, type: 2}
+    weight: 0.4
   - resource: {fileID: 11400000, guid: 21de14e7cf1232a49885f61244cabd89, type: 2}
-    weight: 1
+    weight: 0.4
   - resource: {fileID: 11400000, guid: 835c3fd1758660646b38bbc9cf6d4860, type: 2}
-    weight: 0.3
-  - resource: {fileID: 11400000, guid: 128b4c70b9888a64ebd18d15b5a96e09, type: 2}
-    weight: 0.1
+    weight: 0.05

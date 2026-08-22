@@ -29,4 +29,10 @@ public static class AstroMath
         if (parentMass <= 0) return 0;
         return semiMajorAxisKm * Math.Pow(bodyMass / (3.0 * parentMass), 1.0 / 3.0);
     }
+
+    public static float CalculateBlackbodyTemperature(double starLuminosity, double distanceAU, float albedo)
+    {
+        double temp = 278.3 * Math.Pow(starLuminosity / (distanceAU * distanceAU), 0.25) * Math.Pow(1.0 - albedo, 0.25);
+        return (float)temp;
+    }
 }

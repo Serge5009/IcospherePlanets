@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b9f1d55ce096f1e4684e6b0c3769fe06, type: 3}
-  m_Name: CarbonDioxide
+  m_Name: Hydrogen
   m_EditorClassIdentifier: Assembly-CSharp::GasTemplate
-  gasId: 2
-  gasName: Carbon Dioxide
-  greenhouseMultiplier: 1.5
-  toxicity: 0.1
-  molarMass: 44.01
+  gasId: 7
+  gasName: Hydrogen
+  greenhouseMultiplier: 0
+  toxicity: 0
+  molarMass: 1
   formsClouds: 0
-  skyColor: {r: 0, g: 0.20811898, b: 0.5283019, a: 1}
-  cloudColor: {r: 1, g: 1, b: 1, a: 0.8}
+  skyColor: {r: 0.94509804, g: 0.69752365, b: 0.57254905, a: 1}
+  cloudColor: {r: 0.7709594, g: 0.9417082, b: 0.990566, a: 0.8}

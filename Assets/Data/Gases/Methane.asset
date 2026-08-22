@@ -17,5 +17,6 @@ MonoBehaviour:
   greenhouseMultiplier: 3
   toxicity: 0.5
   molarMass: 16.04
-  skyColor: {r: 0.627451, g: 1, b: 0.8441103, a: 0.5}
-  cloudColor: {r: 0.9292453, g: 0.9770277, b: 1, a: 1}
+  formsClouds: 1
+  skyColor: {r: 0, g: 0.5943396, b: 0.34328237, a: 1}
+  cloudColor: {r: 0.3479886, g: 0.6415094, b: 0.51708215, a: 1}

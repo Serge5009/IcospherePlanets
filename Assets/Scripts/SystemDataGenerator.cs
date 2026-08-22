@@ -2,6 +2,15 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+[Serializable]
+public struct WeightedBedrock { public BedrockTemplate template; public float weight; }
+
+[Serializable]
+public struct WeightedGas { public GasTemplate template; public float weight; }
+
+[Serializable]
+public struct WeightedLiquid { public LiquidTemplate template; public float weight; }
+
 public class SystemDataGenerator : MonoBehaviour
 {
     public static SystemDataGenerator Instance { get; private set; }
@@ -12,11 +21,19 @@ public class SystemDataGenerator : MonoBehaviour
     public float rockBudgetEarths = 15f;
     public float gasBudgetEarths = 500f;
 
-    [Header("Accretion Materials (Assign SOs)")]
-    public BedrockTemplate silicateRock;
-    public BedrockTemplate basaltRock;
-    public BedrockTemplate carbonaceousRock;
-    public BedrockTemplate metallicRock;
+    [Header("Accretion Pools: Bedrock")]
+    public List<WeightedBedrock> innerBedrocks;
+    public List<WeightedBedrock> habitableBedrocks;
+    public List<WeightedBedrock> outerBedrocks;
+
+    [Header("Accretion Pools: Gases")]
+    public List<WeightedGas> innerGases;
+    public List<WeightedGas> outerGases;
+    public List<WeightedGas> giantGases;
+
+    [Header("Accretion Pools: Oceans")]
+    public List<WeightedLiquid> habitableLiquids;
+    public List<WeightedLiquid> outerLiquids;
 
     [Header("Subdivision Math")]
     public float targetCellRadiusKm = 50f;
@@ -59,7 +76,6 @@ public class SystemDataGenerator : MonoBehaviour
         star.atmosphereVisualOpacity = 1.0f;
         star.atmosphereCloudCoverage = UnityEngine.Random.Range(0.6f, 0.8f);
         star.surfacePressureAtm = 100.0;
-
         star.atmosphereCloudScale = Mathf.Pow(20f, UnityEngine.Random.value);
 
         star.dataSubdivisions = CalculateSubdivisions(star.radiusKm, maxGiantSubdivisions);
@@ -108,28 +124,66 @@ public class SystemDataGenerator : MonoBehaviour
     {
         body.noiseScale = UnityEngine.Random.Range(1.5f, 3f);
         body.noiseOffset = UnityEngine.Random.Range(0f, 10000f);
-        body.waterLevel = (body.bodyType == BodyType.RockyPlanet && UnityEngine.Random.value > 0.5f) ? UnityEngine.Random.Range(8000f, 15000f) : 0f;
+
+        body.waterLevel = (body.bodyType == BodyType.RockyPlanet && UnityEngine.Random.value > 0.5f) ? UnityEngine.Random.Range(-2000f, 2000f) : -9999f;
+    }
+
+    private BedrockTemplate GetRandomBedrock(List<WeightedBedrock> pool)
+    {
+        if (pool == null || pool.Count == 0) return null;
+        float total = 0;
+        foreach (var w in pool) total += w.weight;
+        float roll = UnityEngine.Random.Range(0, total);
+        foreach (var w in pool)
+        {
+            roll -= w.weight;
+            if (roll <= 0) return w.template;
+        }
+        return pool[0].template;
+    }
+
+    private LiquidTemplate GetRandomLiquid(List<WeightedLiquid> pool)
+    {
+        if (pool == null || pool.Count == 0) return null;
+        float total = 0;
+        foreach (var w in pool) total += w.weight;
+        float roll = UnityEngine.Random.Range(0, total);
+        foreach (var w in pool)
+        {
+            roll -= w.weight;
+            if (roll <= 0) return w.template;
+        }
+        return pool[0].template;
     }
 
     private void AssignAccretionMaterials(CelestialBody body, double distanceAU, double frostLine)
     {
-        double roll = UnityEngine.Random.value;
-
         if (distanceAU < frostLine * 0.5)
         {
-            body.dominantBedrock = roll < 0.4 ? metallicRock : (roll < 0.8 ? silicateRock : basaltRock);
-            body.secondaryBedrock = body.dominantBedrock == metallicRock ? silicateRock : metallicRock;
+            body.dominantBedrock = GetRandomBedrock(innerBedrocks);
+            body.secondaryBedrock = GetRandomBedrock(innerBedrocks);
+            body.oceanLiquid = null;
         }
         else if (distanceAU < frostLine * 1.2)
         {
-            body.dominantBedrock = roll < 0.6 ? silicateRock : (roll < 0.9 ? basaltRock : metallicRock);
-            body.secondaryBedrock = body.dominantBedrock == silicateRock ? basaltRock : silicateRock;
+            body.dominantBedrock = GetRandomBedrock(habitableBedrocks);
+            body.secondaryBedrock = GetRandomBedrock(habitableBedrocks);
+            body.oceanLiquid = GetRandomLiquid(habitableLiquids);
         }
         else
         {
-            body.dominantBedrock = roll < 0.6 ? carbonaceousRock : (roll < 0.9 ? silicateRock : basaltRock);
-            body.secondaryBedrock = body.dominantBedrock == carbonaceousRock ? silicateRock : carbonaceousRock;
+            body.dominantBedrock = GetRandomBedrock(outerBedrocks);
+            body.secondaryBedrock = GetRandomBedrock(outerBedrocks);
+            body.oceanLiquid = GetRandomLiquid(outerLiquids);
         }
+
+        body.dominantBedrockId = body.dominantBedrock != null ? body.dominantBedrock.bedrockId : (byte)1;
+        body.dominantBedrockColor = body.dominantBedrock != null ? body.dominantBedrock.baseColor : Color.gray;
+
+        body.secondaryBedrockId = body.secondaryBedrock != null ? body.secondaryBedrock.bedrockId : (byte)1;
+        body.secondaryBedrockColor = body.secondaryBedrock != null ? body.secondaryBedrock.baseColor : Color.gray;
+
+        body.oceanColor = body.oceanLiquid != null ? body.oceanLiquid.shallowColor : Color.blue;
     }
 
     private void CalculateCoreAndMagnetosphere(CelestialBody body)
@@ -143,9 +197,9 @@ public class SystemDataGenerator : MonoBehaviour
             return;
         }
 
-        if (body.dominantBedrock == metallicRock) body.coreMassFraction = UnityEngine.Random.Range(0.5f, 0.75f);
-        else if (body.dominantBedrock == silicateRock || body.dominantBedrock == basaltRock) body.coreMassFraction = UnityEngine.Random.Range(0.25f, 0.4f);
-        else body.coreMassFraction = UnityEngine.Random.Range(0.05f, 0.15f);
+        body.coreMassFraction = UnityEngine.Random.Range(0.2f, 0.5f);
+        if (body.dominantBedrock != null && body.dominantBedrock.bedrockName.Contains("Metallic")) body.coreMassFraction = UnityEngine.Random.Range(0.5f, 0.75f);
+        else if (body.dominantBedrock != null && body.dominantBedrock.bedrockName.Contains("Carbon")) body.coreMassFraction = UnityEngine.Random.Range(0.05f, 0.15f);
 
         float baseHeat = 6000f * Mathf.Pow((float)body.massEarths, 0.5f);
 
@@ -182,54 +236,36 @@ public class SystemDataGenerator : MonoBehaviour
 
         if (body.bodyType == BodyType.Star || body.bodyType == BodyType.Asteroid || body.bodyType == BodyType.Comet) return;
 
-        double baseAtmosphereMass = 5.15e18 * body.massEarths;
+        double baseCapacity = 5.15e18 * body.massEarths;
+        double magFactor = Math.Max(0.01, body.magnetosphereStrength);
+        double gravFactor = Math.Max(0.01, body.surfaceGravity / 9.8);
+        double atmosphericCapacityKg = baseCapacity * magFactor * gravFactor;
 
-        if (distanceAU > frostLine) baseAtmosphereMass *= UnityEngine.Random.Range(5f, 50f);
+        double accretedMass = baseCapacity;
+        if (distanceAU > frostLine) accretedMass *= UnityEngine.Random.Range(5f, 50f);
 
-        if (body.surfaceGravity < 4.0) baseAtmosphereMass *= 0.001;
-        if (body.surfaceGravity < 1.5) baseAtmosphereMass = 0;
+        double finalMass = Math.Min(accretedMass, atmosphericCapacityKg);
 
-        if (body.magnetosphereStrength < 0.5f)
+        if (finalMass > 0)
         {
-            double stripFactor = Math.Max(0.01, body.magnetosphereStrength / 0.5f);
-            baseAtmosphereMass *= stripFactor;
-        }
+            List<WeightedGas> gasPool;
+            if (body.bodyType == BodyType.GasGiant || body.bodyType == BodyType.IceGiant) gasPool = giantGases;
+            else if (distanceAU < frostLine) gasPool = innerGases;
+            else gasPool = outerGases;
 
-        if (baseAtmosphereMass > 0)
-        {
-            double co2Ratio = 0, n2Ratio = 0, ch4Ratio = 0, h2oRatio = 0, smogRatio = 0;
-
-            if (body.bodyType == BodyType.GasGiant || body.bodyType == BodyType.IceGiant)
+            if (gasPool != null && gasPool.Count > 0)
             {
-                ch4Ratio = UnityEngine.Random.Range(0.1f, 0.8f);
-                smogRatio = UnityEngine.Random.Range(0.0f, 0.3f);
-                h2oRatio = UnityEngine.Random.Range(0.0f, 0.2f);
-                n2Ratio = 1.0 - (ch4Ratio + smogRatio + h2oRatio);
-            }
-            else if (distanceAU < frostLine)
-            {
-                co2Ratio = UnityEngine.Random.Range(0.5f, 0.95f);
-                n2Ratio = 1.0 - co2Ratio;
+                float totalWeight = 0;
+                foreach (var wg in gasPool) totalWeight += wg.weight;
 
-                if (body.waterLevel > 0)
+                foreach (var wg in gasPool)
                 {
-                    h2oRatio = UnityEngine.Random.Range(0.01f, 0.05f);
-                    co2Ratio -= h2oRatio;
+                    if (wg.template == null) continue;
+                    double gasMass = finalMass * (wg.weight / totalWeight);
+                    gasMass *= UnityEngine.Random.Range(0.8f, 1.2f);
+                    if (gasMass > 0) body.atmosphericGasesKg[wg.template.gasId] = gasMass;
                 }
             }
-            else
-            {
-                ch4Ratio = UnityEngine.Random.Range(0.4f, 0.8f);
-                n2Ratio = 1.0 - ch4Ratio;
-                smogRatio = UnityEngine.Random.Range(0.0f, 0.1f);
-                ch4Ratio -= smogRatio;
-            }
-
-            if (co2Ratio > 0) body.atmosphericGasesKg[2] = baseAtmosphereMass * co2Ratio;
-            if (n2Ratio > 0) body.atmosphericGasesKg[3] = baseAtmosphereMass * n2Ratio;
-            if (h2oRatio > 0) body.atmosphericGasesKg[4] = baseAtmosphereMass * h2oRatio;
-            if (ch4Ratio > 0) body.atmosphericGasesKg[5] = baseAtmosphereMass * ch4Ratio;
-            if (smogRatio > 0) body.atmosphericGasesKg[6] = baseAtmosphereMass * smogRatio;
 
             UpdateAtmosphericProperties(body);
         }
@@ -242,13 +278,9 @@ public class SystemDataGenerator : MonoBehaviour
         }
 
         if (body.bodyType == BodyType.GasGiant || body.bodyType == BodyType.IceGiant)
-        {
             body.atmosphereCloudScale = Mathf.Pow(20f, UnityEngine.Random.value);
-        }
         else
-        {
             body.atmosphereCloudScale = UnityEngine.Random.Range(2.5f, 10f);
-        }
     }
 
     public void UpdateAtmosphericProperties(CelestialBody body)
