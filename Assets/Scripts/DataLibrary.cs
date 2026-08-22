@@ -10,11 +10,13 @@ public class DataLibrary : MonoBehaviour
     public LiquidTemplate[] liquids;
     public GasTemplate[] gases;
     public ResourceTemplate[] resources;
+    public SoilTemplate[] soils;
 
     private Dictionary<byte, BedrockTemplate> bedrockDict;
     private Dictionary<byte, LiquidTemplate> liquidDict;
     private Dictionary<byte, GasTemplate> gasDict;
     private Dictionary<byte, ResourceTemplate> resourceDict;
+    private Dictionary<byte, SoilTemplate> soilDict;
 
     private void Awake()
     {
@@ -40,12 +42,14 @@ public class DataLibrary : MonoBehaviour
 
         resourceDict = new Dictionary<byte, ResourceTemplate>();
         foreach (var r in resources) if (r != null) resourceDict[r.resourceId] = r;
+
+        soilDict = new Dictionary<byte, SoilTemplate>();
+        foreach (var s in soils) if (s != null) soilDict[s.soilId] = s;
     }
 
     public BedrockTemplate GetBedrock(byte id)
     {
         if (bedrockDict.TryGetValue(id, out var template)) return template;
-        Debug.LogWarning($"Bedrock ID {id} not found in DataLibrary!");
         return bedrocks.Length > 0 ? bedrocks[0] : null;
     }
 
@@ -65,5 +69,11 @@ public class DataLibrary : MonoBehaviour
     {
         if (resourceDict.TryGetValue(id, out var template)) return template;
         return resources.Length > 0 ? resources[0] : null;
+    }
+
+    public SoilTemplate GetSoil(byte id)
+    {
+        if (soilDict.TryGetValue(id, out var template)) return template;
+        return soils.Length > 0 ? soils[0] : null;
     }
 }

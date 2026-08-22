@@ -18,6 +18,17 @@ public struct PlanetClimateState
     public bool isTidallyLocked;
     public Vector3 sunDirection;
     public float waterLevel;
+
+    public float minAltitude;
+    public float maxAltitude;
+    public float globalSoilThickness;
+    public Vector4 soilDryColor;
+    public Vector4 soilWetColor;
+    public byte dominantBedrockId;
+    public byte secondaryBedrockId;
+    public Vector4 dominantBedrockColor;
+    public Vector4 secondaryBedrockColor;
+    public Vector3 iceColor;
 }
 
 [BurstCompile]
@@ -25,6 +36,8 @@ public struct ClimateEquilibriumJob : IJobParallelFor
 {
     [ReadOnly] public NativeArray<CellTopology> topologies;
     public NativeArray<CellClimate> climates;
+    public NativeArray<CellVisualData> visuals;
+
     public PlanetClimateState state;
 
     public void Execute(int i)
@@ -65,7 +78,6 @@ public struct ClimateEquilibriumJob : IJobParallelFor
         if (localTemp < state.freezingPoint && state.waterLevel > 0f && state.atmosphericPressure >= 0.05f)
         {
             float degreesBelow = state.freezingPoint - localTemp;
-
             float baselineFrost = degreesBelow * 0.02f;
             clim.snowDepth = Mathf.Max(baselineFrost, clim.moisture * degreesBelow * 0.1f);
 
@@ -95,6 +107,28 @@ public struct ClimateEquilibriumJob : IJobParallelFor
         }
 
         climates[i] = clim;
+
+        float tAlt = (topo.altitude - state.minAltitude) / Mathf.Max(1f, state.maxAltitude - state.minAltitude);
+        float baseThickness = 1.0f - tAlt;
+
+        float curvePower = 1.0f + (state.atmosphericPressure * 2.0f);
+        float thickness = Mathf.Pow(Mathf.Max(0f, baseThickness), curvePower);
+
+        thickness -= topo.rainFactor * tAlt * 0.5f;
+        thickness *= state.globalSoilThickness;
+        thickness = Mathf.Clamp01(thickness);
+
+        Vector4 bedrockCol = (topo.bedrockId == state.secondaryBedrockId) ? state.secondaryBedrockColor : state.dominantBedrockColor;
+        Vector4 currentSoilCol = Vector4.Lerp(state.soilDryColor, state.soilWetColor, clim.moisture);
+        Vector4 finalGroundCol = Vector4.Lerp(bedrockCol, currentSoilCol, thickness);
+
+        CellVisualData vis = visuals[i];
+        vis.bedrockColor = finalGroundCol;
+        vis.surfaceData = new Vector4(clim.iceCover, clim.biomass, clim.liquidDepth, 0f);
+        vis.iceColorR = state.iceColor.x;
+        vis.iceColorG = state.iceColor.y;
+        vis.iceColorB = state.iceColor.z;
+        visuals[i] = vis;
     }
 }
 
@@ -129,10 +163,19 @@ public class ClimateResolver : MonoBehaviour
         Debug.Log($"Resolving Climate Equilibrium for {cycles} cycles...");
 
         List<PlanetSimulationData> simDataList = new List<PlanetSimulationData>();
+        float[] maxAltitudes = new float[bodies.Count];
 
-        foreach (var body in bodies)
+        for (int i = 0; i < bodies.Count; i++)
         {
+            var body = bodies[i];
             if (body.bodyType == BodyType.Star || body.bodyType == BodyType.GasGiant) continue;
+
+            float maxAlt = 1f;
+            foreach (var topo in body.localViewData.topologies)
+            {
+                if (topo.altitude > maxAlt) maxAlt = topo.altitude;
+            }
+            maxAltitudes[simDataList.Count] = maxAlt;
 
             simDataList.Add(new PlanetSimulationData
             {
@@ -153,8 +196,9 @@ public class ClimateResolver : MonoBehaviour
             {
                 NativeList<JobHandle> jobHandles = new NativeList<JobHandle>(simDataList.Count, Allocator.Temp);
 
-                foreach (var simData in simDataList)
+                for (int s = 0; s < simDataList.Count; s++)
                 {
+                    var simData = simDataList[s];
                     CelestialBody body = simData.body;
 
                     float totalAlbedo = 0f;
@@ -188,6 +232,11 @@ public class ClimateResolver : MonoBehaviour
                     float pressureFactor = Mathf.Clamp01((float)body.surfacePressureAtm / 0.05f);
                     float rainStrength = oceanFraction * tempFactor * pressureFactor;
 
+                    float globalSoil = body.soilBaseThickness * (1.0f + (float)body.surfacePressureAtm) * (float)(body.surfaceGravity / 9.8) * (1.0f + rainStrength);
+                    globalSoil = Mathf.Clamp(globalSoil, 0.1f, 3.0f);
+
+                    Color iceCol = body.oceanLiquid != null ? body.oceanLiquid.iceColor : Color.white;
+
                     PlanetClimateState state = new PlanetClimateState
                     {
                         blackbodyTemp = blackbody,
@@ -199,13 +248,25 @@ public class ClimateResolver : MonoBehaviour
                         boilingPoint = boilingPt,
                         isTidallyLocked = body.isTidallyLocked,
                         sunDirection = Vector3.right,
-                        waterLevel = body.waterLevel
+                        waterLevel = body.waterLevel,
+
+                        minAltitude = 0f,
+                        maxAltitude = maxAltitudes[s],
+                        globalSoilThickness = globalSoil,
+                        soilDryColor = body.soilDryColor,
+                        soilWetColor = body.soilWetColor,
+                        dominantBedrockId = body.dominantBedrockId,
+                        secondaryBedrockId = body.secondaryBedrockId,
+                        dominantBedrockColor = body.dominantBedrockColor,
+                        secondaryBedrockColor = body.secondaryBedrockColor,
+                        iceColor = new Vector3(iceCol.r, iceCol.g, iceCol.b)
                     };
 
                     ClimateEquilibriumJob job = new ClimateEquilibriumJob
                     {
                         topologies = simData.topologies,
                         climates = simData.climates,
+                        visuals = simData.visuals,
                         state = state
                     };
 
@@ -221,7 +282,6 @@ public class ClimateResolver : MonoBehaviour
 
                     foreach (var simData in simDataList)
                     {
-                        UpdateVisuals(simData);
                         simData.visuals.CopyTo(simData.meshData.visualDataArray);
                         simData.climates.CopyTo(simData.meshData.climates);
 
@@ -250,24 +310,5 @@ public class ClimateResolver : MonoBehaviour
         }
 
         Debug.Log("Climate Equilibrium Resolved!");
-    }
-
-    private void UpdateVisuals(PlanetSimulationData simData)
-    {
-        Color iceColor = simData.body.oceanLiquid != null ? simData.body.oceanLiquid.iceColor : Color.white;
-
-        for (int i = 0; i < simData.visuals.Length; i++)
-        {
-            CellVisualData vis = simData.visuals[i];
-            CellClimate clim = simData.climates[i];
-
-            vis.surfaceData = new Vector4(clim.iceCover, clim.biomass, clim.liquidDepth, 0f);
-
-            vis.iceColorR = iceColor.r;
-            vis.iceColorG = iceColor.g;
-            vis.iceColorB = iceColor.b;
-
-            simData.visuals[i] = vis;
-        }
     }
 }

@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be7c8d4d407ca48459b8b88a50b0eef2, type: 3}
+  m_Name: Volcanic_Ash
+  m_EditorClassIdentifier: Assembly-CSharp::SoilTemplate
+  soilId: 7
+  soilName: Volcanic Ash
+  dryColor: {r: 0.7607843, g: 0.7607843, b: 0.7607843, a: 1}
+  wetColor: {r: 0.41960785, g: 0.41960785, b: 0.41960785, a: 1}
+  baseThicknessMultiplier: 0.3

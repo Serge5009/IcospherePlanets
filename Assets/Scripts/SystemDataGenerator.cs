@@ -11,6 +11,9 @@ public struct WeightedGas { public GasTemplate template; public float weight; }
 [Serializable]
 public struct WeightedLiquid { public LiquidTemplate template; public float weight; }
 
+[Serializable]
+public struct WeightedSoil { public SoilTemplate template; public float weight; }
+
 public class SystemDataGenerator : MonoBehaviour
 {
     public static SystemDataGenerator Instance { get; private set; }
@@ -25,6 +28,11 @@ public class SystemDataGenerator : MonoBehaviour
     public List<WeightedBedrock> innerBedrocks;
     public List<WeightedBedrock> habitableBedrocks;
     public List<WeightedBedrock> outerBedrocks;
+
+    [Header("Accretion Pools: Soils")]
+    public List<WeightedSoil> innerSoils;
+    public List<WeightedSoil> habitableSoils;
+    public List<WeightedSoil> outerSoils;
 
     [Header("Accretion Pools: Gases")]
     public List<WeightedGas> innerGases;
@@ -124,7 +132,6 @@ public class SystemDataGenerator : MonoBehaviour
     {
         body.noiseScale = UnityEngine.Random.Range(1.5f, 3f);
         body.noiseOffset = UnityEngine.Random.Range(0f, 10000f);
-
         body.waterLevel = (body.bodyType == BodyType.RockyPlanet && UnityEngine.Random.value > 0.5f) ? UnityEngine.Random.Range(-2000f, 2000f) : -9999f;
     }
 
@@ -156,24 +163,41 @@ public class SystemDataGenerator : MonoBehaviour
         return pool[0].template;
     }
 
+    private SoilTemplate GetRandomSoil(List<WeightedSoil> pool)
+    {
+        if (pool == null || pool.Count == 0) return null;
+        float total = 0;
+        foreach (var w in pool) total += w.weight;
+        float roll = UnityEngine.Random.Range(0, total);
+        foreach (var w in pool)
+        {
+            roll -= w.weight;
+            if (roll <= 0) return w.template;
+        }
+        return pool[0].template;
+    }
+
     private void AssignAccretionMaterials(CelestialBody body, double distanceAU, double frostLine)
     {
         if (distanceAU < frostLine * 0.5)
         {
             body.dominantBedrock = GetRandomBedrock(innerBedrocks);
             body.secondaryBedrock = GetRandomBedrock(innerBedrocks);
+            body.surfaceSoil = GetRandomSoil(innerSoils);
             body.oceanLiquid = null;
         }
         else if (distanceAU < frostLine * 1.2)
         {
             body.dominantBedrock = GetRandomBedrock(habitableBedrocks);
             body.secondaryBedrock = GetRandomBedrock(habitableBedrocks);
+            body.surfaceSoil = GetRandomSoil(habitableSoils);
             body.oceanLiquid = GetRandomLiquid(habitableLiquids);
         }
         else
         {
             body.dominantBedrock = GetRandomBedrock(outerBedrocks);
             body.secondaryBedrock = GetRandomBedrock(outerBedrocks);
+            body.surfaceSoil = GetRandomSoil(outerSoils);
             body.oceanLiquid = GetRandomLiquid(outerLiquids);
         }
 
@@ -184,6 +208,11 @@ public class SystemDataGenerator : MonoBehaviour
         body.secondaryBedrockColor = body.secondaryBedrock != null ? body.secondaryBedrock.baseColor : Color.gray;
 
         body.oceanColor = body.oceanLiquid != null ? body.oceanLiquid.shallowColor : Color.blue;
+
+        body.soilId = body.surfaceSoil != null ? body.surfaceSoil.soilId : (byte)0;
+        body.soilDryColor = body.surfaceSoil != null ? body.surfaceSoil.dryColor : new Color(0.7f, 0.6f, 0.4f);
+        body.soilWetColor = body.surfaceSoil != null ? body.surfaceSoil.wetColor : new Color(0.3f, 0.2f, 0.1f);
+        body.soilBaseThickness = body.surfaceSoil != null ? body.surfaceSoil.baseThicknessMultiplier : 1.0f;
     }
 
     private void CalculateCoreAndMagnetosphere(CelestialBody body)
@@ -265,6 +294,14 @@ public class SystemDataGenerator : MonoBehaviour
                     gasMass *= UnityEngine.Random.Range(0.8f, 1.2f);
                     if (gasMass > 0) body.atmosphericGasesKg[wg.template.gasId] = gasMass;
                 }
+            }
+
+            if (body.waterLevel > 0 && body.oceanLiquid != null && body.oceanLiquid.evaporatesInto != null)
+            {
+                byte vaporId = body.oceanLiquid.evaporatesInto.gasId;
+                if (!body.atmosphericGasesKg.ContainsKey(vaporId)) body.atmosphericGasesKg[vaporId] = 0;
+
+                body.atmosphericGasesKg[vaporId] += finalMass * UnityEngine.Random.Range(0.01f, 0.05f);
             }
 
             UpdateAtmosphericProperties(body);
