@@ -67,7 +67,8 @@ public class SystemDisplayManager : MonoBehaviour
 
                 body.visualObject.transform.position = pos.ToVector3();
                 body.visualObject.transform.localScale = new Vector3(scale, scale, scale);
-                body.visualObject.transform.rotation = Quaternion.Euler((float)body.axialTilt, body.currentRotationAngle, 0);
+
+                body.visualObject.transform.rotation = Quaternion.Euler(0, 0, (float)body.axialTilt) * Quaternion.Euler(0, body.currentRotationAngle, 0);
 
                 if (body.parent != null && (!IsMinorBody(body) || drawTrailsForMinorBodies))
                 {

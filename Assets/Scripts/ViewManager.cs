@@ -36,8 +36,12 @@ public class ViewManager : MonoBehaviour
             visualPlanetAngle += deltaAngle * (1f - topocentricWeight);
             visualSkyAngle -= deltaAngle * topocentricWeight;
 
-            currentLocalPlanet.transform.rotation = Quaternion.Euler((float)currentFocusedBody.axialTilt, visualPlanetAngle, 0);
-            skyRotationOffset = Quaternion.Euler(0, visualSkyAngle, 0);
+            float camTilt = Mathf.Lerp(0f, (float)currentFocusedBody.axialTilt, topocentricWeight);
+            float remainingPlanetTilt = (float)currentFocusedBody.axialTilt - camTilt;
+
+            currentLocalPlanet.transform.rotation = Quaternion.Euler(0, 0, remainingPlanetTilt) * Quaternion.Euler(0, visualPlanetAngle, 0);
+
+            skyRotationOffset = Quaternion.Euler(0, visualSkyAngle, 0) * Quaternion.Euler(0, 0, -camTilt);
 
             UpdateProxyBodies(TimeManager.Instance.totalSeconds);
         }
@@ -63,8 +67,6 @@ public class ViewManager : MonoBehaviour
         currentLocalPlanet.transform.localScale = new Vector3(localScale, localScale, localScale);
 
         Planet planet = currentLocalPlanet.AddComponent<Planet>();
-
-        // FIXED: Added 'true' for isLocalView
         planet.InitializeFromData(body, body.localViewData, SystemDisplayManager.Instance.terrainMaterial, SystemDisplayManager.Instance.politicalMaterial, true);
 
         SystemDisplayManager.Instance.SetSystemViewActive(false);
@@ -120,8 +122,6 @@ public class ViewManager : MonoBehaviour
         {
             GameObject proxy = new GameObject($"{body.name} (Proxy)");
             Planet p = proxy.AddComponent<Planet>();
-
-            // FIXED: Added 'false' for isLocalView
             p.InitializeFromData(body, body.systemViewData, SystemDisplayManager.Instance.terrainMaterial, SystemDisplayManager.Instance.politicalMaterial, false);
 
             SphereCollider collider = proxy.AddComponent<SphereCollider>();
@@ -194,7 +194,8 @@ public class ViewManager : MonoBehaviour
             proxy.obj.transform.position = localPos;
             proxy.obj.transform.localScale = new Vector3(localScale, localScale, localScale);
 
-            Quaternion proxySelfRot = Quaternion.Euler((float)proxy.body.axialTilt, proxy.body.currentRotationAngle, 0);
+            Quaternion proxySelfRot = Quaternion.Euler(0, 0, (float)proxy.body.axialTilt) * Quaternion.Euler(0, proxy.body.currentRotationAngle, 0);
+
             proxy.obj.transform.rotation = skyRotationOffset * proxySelfRot;
 
             if (proxy.trail != null && proxy.body.cachedOrbitPoints != null)
