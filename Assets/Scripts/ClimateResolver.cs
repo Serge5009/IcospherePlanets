@@ -70,19 +70,33 @@ public struct ClimateEquilibriumJob : IJobParallelFor
         localTemp = Mathf.Lerp(localTemp, baseTemp, blendFactor);
         clim.localTemperature = localTemp;
 
-        if (state.waterLevel <= 0f) clim.liquidDepth = 0f;
+        if (state.waterLevel > -5000f && topo.altitude < state.waterLevel)
+        {
+            clim.liquidDepth = (state.waterLevel - topo.altitude) / 1000f;
+        }
+        else
+        {
+            clim.liquidDepth = 0f;
+        }
 
         if (clim.liquidDepth > 0) clim.moisture = 1.0f;
         else clim.moisture = topo.rainFactor * state.globalRainStrength;
 
-        if (localTemp < state.freezingPoint && state.waterLevel > 0f && state.atmosphericPressure >= 0.05f)
+        if (localTemp < state.freezingPoint && state.waterLevel > -5000f && state.atmosphericPressure >= 0.05f)
         {
             float degreesBelow = state.freezingPoint - localTemp;
             float baselineFrost = degreesBelow * 0.02f;
             clim.snowDepth = Mathf.Max(baselineFrost, clim.moisture * degreesBelow * 0.1f);
 
-            if (clim.liquidDepth > 0) clim.iceCover = 1.0f;
-            else clim.iceCover = Mathf.Clamp01(clim.snowDepth);
+            if (clim.liquidDepth > 0)
+            {
+                clim.iceCover = 1.0f;
+                clim.liquidDepth = 0f;
+            }
+            else
+            {
+                clim.iceCover = Mathf.Clamp01(clim.snowDepth);
+            }
         }
         else if (localTemp > state.boilingPoint)
         {
@@ -222,9 +236,9 @@ public class ClimateResolver : MonoBehaviour
                     float boilingPt = body.oceanLiquid != null ? body.oceanLiquid.baseBoilingPointKelvin : 373.15f;
 
                     float baseTemp = blackbody + body.greenhouseHeatContribution;
-                    if (baseTemp > boilingPt && body.waterLevel > 0)
+                    if (baseTemp > boilingPt && body.waterLevel > -5000f)
                     {
-                        body.waterLevel = 0f;
+                        body.waterLevel = -9999f;
                     }
 
                     float dynamicLapseRate = (float)(body.surfaceGravity / 9.8) * 6.5f;

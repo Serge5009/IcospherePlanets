@@ -77,7 +77,7 @@ public class UIManager : MonoBehaviour
             string liquid = body.oceanLiquid != null ? body.oceanLiquid.liquidName : "None";
             sb.AppendLine($"<b>Ocean Liquid:</b> {liquid}");
 
-            if (body.waterLevel > 0)
+            if (body.waterLevel > -5000f)
             {
                 sb.AppendLine($"<b>Sea Level (Alt):</b> {body.waterLevel:F0} m");
                 if (body.oceanLiquid != null)
@@ -88,11 +88,12 @@ public class UIManager : MonoBehaviour
             }
             else if (body.oceanLiquid != null)
             {
-                sb.AppendLine("<b>Sea Level:</b> <color=#FF5555>0m (Boiled/Frozen Dry)</color>");
+                if (body.surfacePressureAtm < 0.05) sb.AppendLine("<b>Sea Level:</b> <color=#AAAAAA>Vacuum (No Liquid)</color>");
+                else sb.AppendLine("<b>Sea Level:</b> <color=#FF5555>Boiled Dry (Runaway Greenhouse)</color>");
             }
             else
             {
-                sb.AppendLine("<b>Sea Level:</b> <color=#AAAAAA>0m (No Water Accreted)</color>");
+                sb.AppendLine("<b>Sea Level:</b> <color=#AAAAAA>0m (No Liquid Accreted)</color>");
             }
 
             sb.AppendLine("\n<color=#DDDDDD><b>--- ATMOSPHERE ---</b></color>");
@@ -141,9 +142,16 @@ public class UIManager : MonoBehaviour
         sb.AppendLine($"<b>Bedrock:</b> {rockName}");
         sb.AppendLine($"<b>Absolute Alt:</b> {topo.altitude:F0} m");
 
-        float elevation = topo.altitude - body.waterLevel;
-        if (elevation > 0) sb.AppendLine($"<b>Elevation:</b> <color=#55FF55>+{elevation:F0} m</color> (Land)");
-        else sb.AppendLine($"<b>Elevation:</b> <color=#5555FF>{elevation:F0} m</color> (Underwater)");
+        if (body.waterLevel > -5000f)
+        {
+            float elevation = topo.altitude - body.waterLevel;
+            if (elevation > 0) sb.AppendLine($"<b>Elevation:</b> <color=#55FF55>+{elevation:F0} m</color> (Land)");
+            else sb.AppendLine($"<b>Elevation:</b> <color=#5555FF>{elevation:F0} m</color> (Underwater)");
+        }
+        else
+        {
+            sb.AppendLine($"<b>Elevation:</b> {topo.altitude:F0} m (Dry Planet)");
+        }
 
         sb.AppendLine($"<b>Base Insolation:</b> {(topo.baseInsolation * 100f):F0}%");
         sb.AppendLine($"<b>Wind Neighbor ID:</b> {(topo.windNeighborId == -1 ? "None" : topo.windNeighborId.ToString())}");

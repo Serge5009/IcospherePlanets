@@ -132,7 +132,6 @@ public class SystemDataGenerator : MonoBehaviour
     {
         body.noiseScale = UnityEngine.Random.Range(1.5f, 3f);
         body.noiseOffset = UnityEngine.Random.Range(0f, 10000f);
-        body.waterLevel = (body.bodyType == BodyType.RockyPlanet && UnityEngine.Random.value > 0.5f) ? UnityEngine.Random.Range(-2000f, 2000f) : -9999f;
     }
 
     private BedrockTemplate GetRandomBedrock(List<WeightedBedrock> pool)
@@ -213,6 +212,15 @@ public class SystemDataGenerator : MonoBehaviour
         body.soilDryColor = body.surfaceSoil != null ? body.surfaceSoil.dryColor : new Color(0.7f, 0.6f, 0.4f);
         body.soilWetColor = body.surfaceSoil != null ? body.surfaceSoil.wetColor : new Color(0.3f, 0.2f, 0.1f);
         body.soilBaseThickness = body.surfaceSoil != null ? body.surfaceSoil.baseThicknessMultiplier : 1.0f;
+
+        if (body.oceanLiquid != null && body.bodyType == BodyType.RockyPlanet && UnityEngine.Random.value > 0.5f)
+        {
+            body.waterLevel = UnityEngine.Random.Range(-2000f, 2000f);
+        }
+        else
+        {
+            body.waterLevel = -9999f;
+        }
     }
 
     private void CalculateCoreAndMagnetosphere(CelestialBody body)
@@ -296,11 +304,10 @@ public class SystemDataGenerator : MonoBehaviour
                 }
             }
 
-            if (body.waterLevel > 0 && body.oceanLiquid != null && body.oceanLiquid.evaporatesInto != null)
+            if (body.waterLevel > -5000f && body.oceanLiquid != null && body.oceanLiquid.evaporatesInto != null)
             {
                 byte vaporId = body.oceanLiquid.evaporatesInto.gasId;
                 if (!body.atmosphericGasesKg.ContainsKey(vaporId)) body.atmosphericGasesKg[vaporId] = 0;
-
                 body.atmosphericGasesKg[vaporId] += finalMass * UnityEngine.Random.Range(0.01f, 0.05f);
             }
 
@@ -309,7 +316,7 @@ public class SystemDataGenerator : MonoBehaviour
 
         if (body.surfacePressureAtm < 0.05)
         {
-            body.waterLevel = 0f;
+            body.waterLevel = -9999f;
             if (body.archetype == PlanetArchetype.ActiveTerrestrial)
                 body.archetype = PlanetArchetype.DeadTerrestrial;
         }

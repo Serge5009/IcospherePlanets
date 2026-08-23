@@ -2361,7 +2361,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 647036206}
   m_HandleRect: {fileID: 647036205}
   m_Direction: 2
-  m_Value: 0
+  m_Value: 1
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -4726,11 +4726,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DataLibrary
   bedrocks:
+  - {fileID: 11400000, guid: 96bd0381580152b46867cfc517f37015, type: 2}
+  - {fileID: 11400000, guid: f6c7792522bf44e4a8a1e9aada2a8d0b, type: 2}
+  - {fileID: 11400000, guid: bee5c593bdf94d948b2fbd5254a0f37f, type: 2}
+  - {fileID: 11400000, guid: c54993244d15cd44a96fc185cf63331f, type: 2}
+  - {fileID: 11400000, guid: 59ec1dcb9a509cd4e85ae095739a1d7f, type: 2}
+  - {fileID: 11400000, guid: 893d93f4e047dfe4786f0ba282bee6e5, type: 2}
   - {fileID: 11400000, guid: 1b007a7a0e48da049843009321e2a63e, type: 2}
-  - {fileID: 11400000, guid: f917b560f5bca5e40846b7de46d2bb8c, type: 2}
-  - {fileID: 11400000, guid: 5ec18e18550de424db9b6c803b3d4b3e, type: 2}
-  - {fileID: 11400000, guid: e87e5c2abba611d47bb986d91d00ce60, type: 2}
-  - {fileID: 11400000, guid: 6de0ce89726d2234aaa16a38caba0d4c, type: 2}
+  - {fileID: 11400000, guid: 01cb075b44e1ca64686a59d520417371, type: 2}
+  - {fileID: 11400000, guid: 0c1b0cb0b4834ba41ae39441e884b901, type: 2}
+  - {fileID: 11400000, guid: f14d083ba8b088147a13415a7ea2e894, type: 2}
+  - {fileID: 11400000, guid: 1e5c4752a9a19774c9de322ec6d13b67, type: 2}
   liquids:
   - {fileID: 11400000, guid: 177c9b8d0dd8d524ca68e04394c76231, type: 2}
   - {fileID: 11400000, guid: cde1d204ff13c9d4fbc6280856b247b8, type: 2}
@@ -4748,7 +4754,24 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 085aaeb8900104141b383fe474cc5161, type: 2}
   - {fileID: 11400000, guid: 835c3fd1758660646b38bbc9cf6d4860, type: 2}
   - {fileID: 11400000, guid: 9727f670ff7d73a4a888bb60e668e009, type: 2}
-  soils: []
+  soils:
+  - {fileID: 11400000, guid: 50b0afe1a55f8aa448249284bd2794c4, type: 2}
+  - {fileID: 11400000, guid: 8cd84cab6c4436949933018d6f9f4180, type: 2}
+  - {fileID: 11400000, guid: 31e185329145e0c4f96a3ce1189dee95, type: 2}
+  - {fileID: 11400000, guid: 19190eb382faafc41bd59d1ebde2c31a, type: 2}
+  - {fileID: 11400000, guid: c60a8c4e9810a2141a56a5115a877040, type: 2}
+  - {fileID: 11400000, guid: aaa8f981448fbcd4d85142cf7b8a6ea1, type: 2}
+  - {fileID: 11400000, guid: b7dfdff4c72851d4eb69855be901bf3d, type: 2}
+  - {fileID: 11400000, guid: b3bc119c7ab0b98488ac5bb93e7c66c9, type: 2}
+  - {fileID: 11400000, guid: b5aec77421c0fef49a64e6d4adc5979c, type: 2}
+  - {fileID: 11400000, guid: dc57e93d9aebdca4785502749a167f4c, type: 2}
+  - {fileID: 11400000, guid: f08c21a5aa4e6b84fb8a57b8492a8364, type: 2}
+  - {fileID: 11400000, guid: 8ac84d469abc9b24b926db5c998214ea, type: 2}
+  - {fileID: 11400000, guid: 5670ce64c904dfd469047a9b83a7483c, type: 2}
+  - {fileID: 11400000, guid: e9e14e6a3023a0040b89fc717dec0b22, type: 2}
+  - {fileID: 11400000, guid: 77ac83c9d593cd3488a4444d852f2718, type: 2}
+  - {fileID: 11400000, guid: c2f561e6708ce4244857663ed980c7bf, type: 2}
+  - {fileID: 11400000, guid: 4c5014994b8a8f34fbc62c88230ca71a, type: 2}
 --- !u!1 &1873122170
 GameObject:
   m_ObjectHideFlags: 0
@@ -4841,7 +4864,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: -0.00008258281}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!1 &2038333901
