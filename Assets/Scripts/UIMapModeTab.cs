@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Collections.Generic;
 
 public class UIMapModeTab : UITabPanel
 {
@@ -13,28 +14,80 @@ public class UIMapModeTab : UITabPanel
 
     private void Start()
     {
-        if (buttonPrefab != null && mainModeContainer != null)
+        if (MapModeManager.Instance != null)
         {
-            ClearContainer(mainModeContainer);
-            ClearContainer(subModeContainer);
+            MapModeManager.Instance.OnModeChanged += HandleModeChanged;
+            GenerateMainButtons();
+        }
+    }
 
-            CreateButton(mainModeContainer, "Political", () => Debug.Log("Political Mode Clicked"));
-            CreateButton(mainModeContainer, "Temperature", () => { ClearContainer(subModeContainer); Debug.Log("Temperature Mode Clicked"); });
-            CreateButton(mainModeContainer, "Resources", PopulateDummySubModes);
-            CreateButton(mainModeContainer, "None", () => { ClearContainer(subModeContainer); Debug.Log("None Mode Clicked"); });
+    private void OnDestroy()
+    {
+        if (MapModeManager.Instance != null)
+        {
+            MapModeManager.Instance.OnModeChanged -= HandleModeChanged;
         }
     }
 
     public override void OnOpen()
     {
         base.OnOpen();
+        if (MapModeManager.Instance != null)
+        {
+            HandleModeChanged(MapModeManager.Instance.ActiveMode, MapModeManager.Instance.ActiveSubModeId);
+        }
     }
 
     protected override void Refresh()
     {
     }
 
-    public void CreateButton(Transform container, string text, UnityEngine.Events.UnityAction onClick)
+    private void GenerateMainButtons()
+    {
+        ClearContainer(mainModeContainer);
+
+        foreach (var mode in MapModeManager.Instance.availableModes)
+        {
+            if (mode == null) continue;
+
+            MapModeTemplate capturedMode = mode;
+
+            CreateButton(mainModeContainer, mode.modeName, () =>
+            {
+                MapModeManager.Instance.RequestModeChange(capturedMode);
+            });
+        }
+
+        CreateButton(mainModeContainer, "None", () =>
+        {
+            MapModeManager.Instance.RequestModeChange(null);
+        });
+    }
+
+    private void HandleModeChanged(MapModeTemplate activeMode, byte subModeId)
+    {
+        ClearContainer(subModeContainer);
+
+        if (activeMode != null && activeMode.modeType == MapModeType.Resource)
+        {
+            if (DataLibrary.Instance != null && DataLibrary.Instance.resources != null)
+            {
+                foreach (var resource in DataLibrary.Instance.resources)
+                {
+                    if (resource == null) continue;
+
+                    byte capturedId = resource.resourceId;
+                    CreateButton(subModeContainer, resource.resourceName, () =>
+                    {
+                        MapModeManager.Instance.RequestModeChange(activeMode, capturedId);
+                    });
+                }
+            }
+        }
+
+    }
+
+    private void CreateButton(Transform container, string text, UnityEngine.Events.UnityAction onClick)
     {
         GameObject btnObj = Instantiate(buttonPrefab, container);
 
@@ -45,19 +98,11 @@ public class UIMapModeTab : UITabPanel
         if (btn != null) btn.onClick.AddListener(onClick);
     }
 
-    public void ClearContainer(Transform container)
+    private void ClearContainer(Transform container)
     {
         foreach (Transform child in container)
         {
             Destroy(child.gameObject);
         }
-    }
-
-    private void PopulateDummySubModes()
-    {
-        ClearContainer(subModeContainer);
-        CreateButton(subModeContainer, "Iron", () => Debug.Log("Iron Selected"));
-        CreateButton(subModeContainer, "Organics", () => Debug.Log("Organics Selected"));
-        CreateButton(subModeContainer, "Silicates", () => Debug.Log("Silicates Selected"));
     }
 }
