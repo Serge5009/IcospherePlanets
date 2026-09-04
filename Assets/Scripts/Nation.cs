@@ -4,12 +4,12 @@ public class Nation
 {
     public int id;
     public string name;
-    public Color mapColor;
+    public Color color;
 
-    public Nation(int id, string name, Color mapColor)
+    public Nation(int id, string name, Color color)
     {
         this.id = id;
         this.name = name;
-        this.mapColor = mapColor;
+        this.color = color;
     }
 }

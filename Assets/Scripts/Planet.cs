@@ -1,19 +1,38 @@
 using UnityEngine;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 public class Planet : MonoBehaviour
 {
+    public static HashSet<Planet> ActivePlanets = new HashSet<Planet>();
+
     public CelestialBody bodyData;
     public PlanetMeshData meshData;
 
     private ComputeBuffer terrainBuffer;
     private ComputeBuffer overlayBuffer;
+    private ComputeBuffer politicalBuffer;
     private ComputeBuffer windBuffer;
 
     public MeshRenderer terrainRenderer;
     public MeshRenderer overlayRenderer;
+    public MeshRenderer politicalRenderer;
+
+    private MaterialPropertyBlock terrainBlock;
+    private MaterialPropertyBlock overlayBlock;
+    private MaterialPropertyBlock polBlock;
 
     private int currentHoveredCellId = -1;
+
+    private void OnEnable()
+    {
+        ActivePlanets.Add(this);
+    }
+
+    private void OnDisable()
+    {
+        ActivePlanets.Remove(this);
+    }
 
     public void InitializeFromData(CelestialBody body, PlanetMeshData data, Material terrainMat, Material overlayMat, bool isLocalView)
     {
@@ -22,7 +41,6 @@ public class Planet : MonoBehaviour
 
         MeshFilter filter = gameObject.AddComponent<MeshFilter>();
         filter.sharedMesh = data.sharedMesh;
-
         terrainRenderer = gameObject.AddComponent<MeshRenderer>();
         terrainRenderer.sharedMaterial = terrainMat;
 
@@ -30,14 +48,21 @@ public class Planet : MonoBehaviour
         overlayObj.transform.SetParent(transform);
         overlayObj.transform.localPosition = Vector3.zero;
         overlayObj.transform.localScale = Vector3.one * 1.001f;
-
         MeshFilter overlayFilter = overlayObj.AddComponent<MeshFilter>();
         overlayFilter.sharedMesh = data.sharedMesh;
-
         overlayRenderer = overlayObj.AddComponent<MeshRenderer>();
         overlayRenderer.sharedMaterial = overlayMat;
+        overlayRenderer.enabled = true;
 
-        overlayRenderer.enabled = isLocalView;
+        GameObject polObj = new GameObject("Political Shell");
+        polObj.transform.SetParent(transform);
+        polObj.transform.localPosition = Vector3.zero;
+        polObj.transform.localScale = Vector3.one * 1.002f;
+        MeshFilter polFilter = polObj.AddComponent<MeshFilter>();
+        polFilter.sharedMesh = data.sharedMesh;
+        politicalRenderer = polObj.AddComponent<MeshRenderer>();
+        politicalRenderer.sharedMaterial = SystemDisplayManager.Instance.politicalMaterial;
+        politicalRenderer.enabled = false;
 
         SphereCollider sc = gameObject.GetComponent<SphereCollider>();
         if (sc == null) sc = gameObject.AddComponent<SphereCollider>();
@@ -56,16 +81,23 @@ public class Planet : MonoBehaviour
         overlayBuffer = new ComputeBuffer(data.overlayVisuals.Length, Marshal.SizeOf(typeof(OverlayVisualData)));
         overlayBuffer.SetData(data.overlayVisuals);
 
+        politicalBuffer = new ComputeBuffer(data.politicalVisuals.Length, Marshal.SizeOf(typeof(PoliticalVisualData)));
+        politicalBuffer.SetData(data.politicalVisuals);
+
         windBuffer = new ComputeBuffer(data.windVisuals.Length, Marshal.SizeOf(typeof(WindVisualData)));
         windBuffer.SetData(data.windVisuals);
 
-        MaterialPropertyBlock terrainBlock = new MaterialPropertyBlock();
+        terrainBlock = new MaterialPropertyBlock();
         terrainBlock.SetBuffer("_TerrainVisualData", terrainBuffer);
         terrainRenderer.SetPropertyBlock(terrainBlock);
 
-        MaterialPropertyBlock overlayBlock = new MaterialPropertyBlock();
+        overlayBlock = new MaterialPropertyBlock();
         overlayBlock.SetBuffer("_OverlayVisualData", overlayBuffer);
         overlayRenderer.SetPropertyBlock(overlayBlock);
+
+        polBlock = new MaterialPropertyBlock();
+        polBlock.SetBuffer("_PoliticalVisualData", politicalBuffer);
+        politicalRenderer.SetPropertyBlock(polBlock);
 
         if ((body.surfacePressureAtm >= 0.05 || body.bodyType == BodyType.Star) && SystemDisplayManager.Instance.atmosphereMaterial != null)
         {
@@ -103,6 +135,7 @@ public class Planet : MonoBehaviour
                 {
                     terrainRenderer.enabled = false;
                     overlayRenderer.enabled = false;
+                    politicalRenderer.enabled = false;
                 }
             }
         }
@@ -122,9 +155,10 @@ public class Planet : MonoBehaviour
             if (bodyData.atmosphereVisualOpacity >= 0.99f)
             {
                 terrainRenderer.enabled = !show;
+                overlayRenderer.enabled = !show;
 
-                bool isLocalView = (meshData == bodyData.localViewData);
-                overlayRenderer.enabled = !show && isLocalView;
+                bool isPolitical = MapModeManager.Instance != null && MapModeManager.Instance.ActiveMode != null && MapModeManager.Instance.ActiveMode.modeType == MapModeType.Political;
+                politicalRenderer.enabled = !show && isPolitical;
             }
         }
     }
@@ -133,7 +167,11 @@ public class Planet : MonoBehaviour
     {
         if (currentHoveredCellId == cellId) return;
 
-        float baseAlpha = (MapModeManager.Instance != null && MapModeManager.Instance.ActiveMode != null) ? 0.85f : 0f;
+        bool isGradientMode = MapModeManager.Instance != null &&
+                              MapModeManager.Instance.ActiveMode != null &&
+                              MapModeManager.Instance.ActiveMode.modeType == MapModeType.Gradient;
+
+        float baseAlpha = isGradientMode ? 0.85f : 0f;
 
         if (currentHoveredCellId >= 0 && currentHoveredCellId < meshData.overlayVisuals.Length)
         {
@@ -155,17 +193,28 @@ public class Planet : MonoBehaviour
 
     public void UpdateTerrainBuffer()
     {
-        if (terrainBuffer != null && meshData != null && meshData.terrainVisuals != null)
+        if (terrainBuffer != null && terrainBlock != null)
         {
             terrainBuffer.SetData(meshData.terrainVisuals);
+            terrainRenderer.SetPropertyBlock(terrainBlock);
         }
     }
 
     public void UpdateOverlayBuffer()
     {
-        if (overlayBuffer != null && meshData != null && meshData.overlayVisuals != null)
+        if (overlayBuffer != null && overlayBlock != null)
         {
             overlayBuffer.SetData(meshData.overlayVisuals);
+            overlayRenderer.SetPropertyBlock(overlayBlock);
+        }
+    }
+
+    public void UpdatePoliticalBuffer()
+    {
+        if (politicalBuffer != null && polBlock != null)
+        {
+            politicalBuffer.SetData(meshData.politicalVisuals);
+            politicalRenderer.SetPropertyBlock(polBlock);
         }
     }
 
@@ -178,6 +227,7 @@ public class Planet : MonoBehaviour
 
         if (terrainBuffer != null) terrainBuffer.Release();
         if (overlayBuffer != null) overlayBuffer.Release();
+        if (politicalBuffer != null) politicalBuffer.Release();
         if (windBuffer != null) windBuffer.Release();
     }
 }

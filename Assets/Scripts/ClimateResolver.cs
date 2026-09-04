@@ -303,5 +303,12 @@ public class ClimateResolver : MonoBehaviour
         }
 
         Debug.Log("Climate Equilibrium Resolved!");
+
+        GeopoliticsGenerator.GenerateNations(bodies);
+
+        if (MapModeManager.Instance != null)
+        {
+            MapModeManager.Instance.ApplyModeToAllPlanets();
+        }
     }
 }

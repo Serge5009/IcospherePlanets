@@ -5718,7 +5718,8 @@ MonoBehaviour:
   defaultTrailColor: {r: 0.8620791, g: 2.9960783, b: 2.5052774, a: 1}
   highlightTrailColor: {r: 8, g: 5.661272, b: 0, a: 1}
   terrainMaterial: {fileID: 2100000, guid: 5d5a58ffbb12aad48b71b005c3a57dd8, type: 2}
-  politicalMaterial: {fileID: 2100000, guid: 6ec0d1aea9011b146a4200d536ae56c7, type: 2}
+  overlayMaterial: {fileID: 2100000, guid: 6ec0d1aea9011b146a4200d536ae56c7, type: 2}
+  politicalMaterial: {fileID: 2100000, guid: edd362e3310c56a4f8912ab1b619b463, type: 2}
   atmosphereMaterial: {fileID: 2100000, guid: d18ab5d205eb0e14bbf7594354ce52b8, type: 2}
   lowResAtmosphereMesh: {fileID: 289301614986012343, guid: eaca596677841854088f11fe6e6a7ab6, type: 3}
   highResAtmosphereMesh: {fileID: 289301614986012343, guid: fb5487acc677576479923d8c8e85e781, type: 3}

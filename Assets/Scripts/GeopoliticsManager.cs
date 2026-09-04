@@ -7,7 +7,7 @@ public class GeopoliticsManager : MonoBehaviour
 
     [Header("Starting Setup")]
     public NationTemplate[] startingNations;
-    public Color unclaimedColor = new Color(0.2f, 0.2f, 0.2f, 1f);
+    public Color unclaimedColor = new Color(0.3f, 0.3f, 0.3f, 0.5f);
 
     private Dictionary<int, Nation> activeNations = new Dictionary<int, Nation>();
     private int nextNationId = 1;
@@ -26,11 +26,20 @@ public class GeopoliticsManager : MonoBehaviour
 
     private void InitializeStartingNations()
     {
+        activeNations.Clear();
+        nextNationId = 1;
+
         activeNations.Add(0, new Nation(0, "Unclaimed", unclaimedColor));
 
-        foreach (var template in startingNations)
+        if (startingNations != null)
         {
-            CreateNation(template.nationName, template.defaultColor);
+            foreach (var template in startingNations)
+            {
+                if (template != null)
+                {
+                    CreateNation(template.nationName, template.defaultColor);
+                }
+            }
         }
     }
 
@@ -56,5 +65,22 @@ public class GeopoliticsManager : MonoBehaviour
     public int GetTotalNations()
     {
         return activeNations.Count;
+    }
+
+    public Vector4[] GetNationColorsAsArray()
+    {
+        Vector4[] colors = new Vector4[nextNationId];
+        for (int i = 0; i < nextNationId; i++)
+        {
+            if (activeNations.TryGetValue(i, out Nation n))
+            {
+                colors[i] = new Vector4(n.color.r, n.color.g, n.color.b, n.color.a);
+            }
+            else
+            {
+                colors[i] = new Vector4(unclaimedColor.r, unclaimedColor.g, unclaimedColor.b, unclaimedColor.a);
+            }
+        }
+        return colors;
     }
 }

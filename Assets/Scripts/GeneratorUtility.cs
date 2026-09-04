@@ -156,6 +156,7 @@ public static class GeneratorUtility
 
         data.terrainVisuals = new TerrainVisualData[cellCount];
         data.overlayVisuals = new OverlayVisualData[cellCount];
+        data.politicalVisuals = new PoliticalVisualData[cellCount];
         data.windVisuals = new WindVisualData[cellCount];
     }
 }

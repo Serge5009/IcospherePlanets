@@ -40,7 +40,6 @@ public class ViewManager : MonoBehaviour
             float remainingPlanetTilt = (float)currentFocusedBody.axialTilt - camTilt;
 
             currentLocalPlanet.transform.rotation = Quaternion.Euler(0, 0, remainingPlanetTilt) * Quaternion.Euler(0, visualPlanetAngle, 0);
-
             skyRotationOffset = Quaternion.Euler(0, visualSkyAngle, 0) * Quaternion.Euler(0, 0, -camTilt);
 
             UpdateProxyBodies(TimeManager.Instance.totalSeconds);
@@ -67,7 +66,8 @@ public class ViewManager : MonoBehaviour
         currentLocalPlanet.transform.localScale = new Vector3(localScale, localScale, localScale);
 
         Planet planet = currentLocalPlanet.AddComponent<Planet>();
-        planet.InitializeFromData(body, body.localViewData, SystemDisplayManager.Instance.terrainMaterial, SystemDisplayManager.Instance.politicalMaterial, true);
+
+        planet.InitializeFromData(body, body.localViewData, SystemDisplayManager.Instance.terrainMaterial, SystemDisplayManager.Instance.overlayMaterial, true);
 
         SystemDisplayManager.Instance.SetSystemViewActive(false);
         SpawnProxyBodies(body);
@@ -122,7 +122,8 @@ public class ViewManager : MonoBehaviour
         {
             GameObject proxy = new GameObject($"{body.name} (Proxy)");
             Planet p = proxy.AddComponent<Planet>();
-            p.InitializeFromData(body, body.systemViewData, SystemDisplayManager.Instance.terrainMaterial, SystemDisplayManager.Instance.politicalMaterial, false);
+
+            p.InitializeFromData(body, body.systemViewData, SystemDisplayManager.Instance.terrainMaterial, SystemDisplayManager.Instance.overlayMaterial, false);
 
             SphereCollider collider = proxy.AddComponent<SphereCollider>();
             collider.radius = 1f;
@@ -195,7 +196,6 @@ public class ViewManager : MonoBehaviour
             proxy.obj.transform.localScale = new Vector3(localScale, localScale, localScale);
 
             Quaternion proxySelfRot = Quaternion.Euler(0, 0, (float)proxy.body.axialTilt) * Quaternion.Euler(0, proxy.body.currentRotationAngle, 0);
-
             proxy.obj.transform.rotation = skyRotationOffset * proxySelfRot;
 
             if (proxy.trail != null && proxy.body.cachedOrbitPoints != null)

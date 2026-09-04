@@ -37,6 +37,7 @@ public class SystemDisplayManager : MonoBehaviour
 
     [Header("Visuals")]
     public Material terrainMaterial;
+    public Material overlayMaterial;
     public Material politicalMaterial;
 
     [Header("Atmosphere Visuals")]
@@ -126,7 +127,8 @@ public class SystemDisplayManager : MonoBehaviour
         planetObj.transform.SetParent(this.transform);
 
         Planet planet = planetObj.AddComponent<Planet>();
-        planet.InitializeFromData(body, body.systemViewData, terrainMaterial, politicalMaterial, false);
+
+        planet.InitializeFromData(body, body.systemViewData, terrainMaterial, overlayMaterial, false);
 
         SphereCollider collider = planetObj.AddComponent<SphereCollider>();
         collider.radius = 1f;

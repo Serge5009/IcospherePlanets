@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using Unity.Collections;
-using Unity.Jobs;
 
 public class MapModeManager : MonoBehaviour
 {
@@ -32,7 +30,8 @@ public class MapModeManager : MonoBehaviour
 
         processors = new Dictionary<MapModeType, IMapModeProcessor>
         {
-            { MapModeType.Gradient, new GradientMapModeProcessor() }
+            { MapModeType.Gradient, new GradientMapModeProcessor() },
+            { MapModeType.Political, new PoliticalMapModeProcessor() }
         };
 
         clearProcessor = new ClearMapMode();
@@ -73,17 +72,17 @@ public class MapModeManager : MonoBehaviour
     public void ToggleAtmosphere(bool show)
     {
         if (ShowAtmosphere == show) return;
-
         ShowAtmosphere = show;
         OnAtmosphereToggled?.Invoke(ShowAtmosphere);
     }
 
-    private void ApplyModeToAllPlanets()
+    public void ApplyModeToAllPlanets()
     {
         if (SystemDataGenerator.Instance == null || SystemDataGenerator.Instance.allBodies.Count == 0) return;
 
-        IMapModeProcessor processor = clearProcessor;
+        bool isPolitical = ActiveMode != null && ActiveMode.modeType == MapModeType.Political;
 
+        IMapModeProcessor processor = clearProcessor;
         if (ActiveMode != null && processors.ContainsKey(ActiveMode.modeType))
         {
             processor = processors[ActiveMode.modeType];
@@ -93,17 +92,26 @@ public class MapModeManager : MonoBehaviour
         {
             if (body.bodyType == BodyType.Star || body.bodyType == BodyType.GasGiant) continue;
 
-            if (body.localViewData != null)
-                processor.ApplyMode(body.localViewData, ActiveMode, ActiveSubModeId);
+            if (body.localViewData != null) processor.ApplyMode(body.localViewData, ActiveMode, ActiveSubModeId);
+            if (body.systemViewData != null) processor.ApplyMode(body.systemViewData, ActiveMode, ActiveSubModeId);
 
-            if (body.systemViewData != null)
-                processor.ApplyMode(body.systemViewData, ActiveMode, ActiveSubModeId);
+            if (isPolitical || ActiveMode == null)
+            {
+                if (body.localViewData != null) clearProcessor.ApplyMode(body.localViewData, null, 0);
+                if (body.systemViewData != null) clearProcessor.ApplyMode(body.systemViewData, null, 0);
+            }
         }
 
-        Planet[] allPlanets = FindObjectsByType<Planet>(FindObjectsSortMode.None);
-        foreach (Planet p in allPlanets)
+        foreach (Planet p in Planet.ActivePlanets)
         {
-            p.UpdateOverlayBuffer();
+            if (p != null)
+            {
+                p.UpdateOverlayBuffer();
+                p.UpdatePoliticalBuffer();
+
+                bool hiddenByAtmos = p.bodyData.atmosphereVisualOpacity >= 0.99f && ShowAtmosphere;
+                p.politicalRenderer.enabled = isPolitical && !hiddenByAtmos;
+            }
         }
     }
 }
