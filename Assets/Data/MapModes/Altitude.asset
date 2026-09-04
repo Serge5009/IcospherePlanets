@@ -17,7 +17,7 @@ MonoBehaviour:
   scaleType: 0
   absoluteMin: 0
   absoluteMax: 0
-  minColor: {r: 0.13207549, g: 0.13207549, b: 0.13207549, a: 1}
+  minColor: {r: 0, g: 0, b: 0, a: 1}
   maxColor: {r: 1, g: 1, b: 1, a: 1}
   useAnchors: 0
   anchor1Value: 0

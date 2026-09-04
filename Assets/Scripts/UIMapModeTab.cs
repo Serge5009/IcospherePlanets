@@ -12,12 +12,24 @@ public class UIMapModeTab : UITabPanel
     [Header("Prefabs")]
     public GameObject buttonPrefab;
 
+    [Header("Toggles")]
+    public Toggle atmosphereToggle;
+
     private void Start()
     {
         if (MapModeManager.Instance != null)
         {
             MapModeManager.Instance.OnModeChanged += HandleModeChanged;
             GenerateMainButtons();
+
+            if (atmosphereToggle != null)
+            {
+                atmosphereToggle.isOn = MapModeManager.Instance.ShowAtmosphere;
+                atmosphereToggle.onValueChanged.AddListener((isOn) =>
+                {
+                    MapModeManager.Instance.ToggleAtmosphere(isOn);
+                });
+            }
         }
     }
 
@@ -35,6 +47,11 @@ public class UIMapModeTab : UITabPanel
         if (MapModeManager.Instance != null)
         {
             HandleModeChanged(MapModeManager.Instance.ActiveMode, MapModeManager.Instance.ActiveSubModeId);
+
+            if (atmosphereToggle != null)
+            {
+                atmosphereToggle.SetIsOnWithoutNotify(MapModeManager.Instance.ShowAtmosphere);
+            }
         }
     }
 
@@ -84,7 +101,6 @@ public class UIMapModeTab : UITabPanel
                 }
             }
         }
-
     }
 
     private void CreateButton(Transform container, string text, UnityEngine.Events.UnityAction onClick)

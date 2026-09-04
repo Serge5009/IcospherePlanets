@@ -96,11 +96,35 @@ public class Planet : MonoBehaviour
 
                 body.atmosphereObject = atmosObj;
 
-                if (body.atmosphereVisualOpacity >= 0.99f)
+                bool showAtmos = MapModeManager.Instance != null ? MapModeManager.Instance.ShowAtmosphere : true;
+                atmosObj.SetActive(showAtmos);
+
+                if (body.atmosphereVisualOpacity >= 0.99f && showAtmos)
                 {
                     terrainRenderer.enabled = false;
                     overlayRenderer.enabled = false;
                 }
+            }
+        }
+
+        if (MapModeManager.Instance != null)
+        {
+            MapModeManager.Instance.OnAtmosphereToggled += HandleAtmosphereToggled;
+        }
+    }
+
+    private void HandleAtmosphereToggled(bool show)
+    {
+        if (bodyData.atmosphereObject != null)
+        {
+            bodyData.atmosphereObject.SetActive(show);
+
+            if (bodyData.atmosphereVisualOpacity >= 0.99f)
+            {
+                terrainRenderer.enabled = !show;
+
+                bool isLocalView = (meshData == bodyData.localViewData);
+                overlayRenderer.enabled = !show && isLocalView;
             }
         }
     }
@@ -147,6 +171,11 @@ public class Planet : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (MapModeManager.Instance != null)
+        {
+            MapModeManager.Instance.OnAtmosphereToggled -= HandleAtmosphereToggled;
+        }
+
         if (terrainBuffer != null) terrainBuffer.Release();
         if (overlayBuffer != null) overlayBuffer.Release();
         if (windBuffer != null) windBuffer.Release();

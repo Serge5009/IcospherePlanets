@@ -17,7 +17,10 @@ public class MapModeManager : MonoBehaviour
     public MapModeTemplate ActiveMode { get; private set; }
     public byte ActiveSubModeId { get; private set; }
 
+    public bool ShowAtmosphere { get; private set; } = true;
+
     public event Action<MapModeTemplate, byte> OnModeChanged;
+    public event Action<bool> OnAtmosphereToggled;
 
     private Dictionary<MapModeType, IMapModeProcessor> processors;
     private ClearMapMode clearProcessor;
@@ -65,6 +68,14 @@ public class MapModeManager : MonoBehaviour
         ApplyModeToAllPlanets();
 
         OnModeChanged?.Invoke(ActiveMode, ActiveSubModeId);
+    }
+
+    public void ToggleAtmosphere(bool show)
+    {
+        if (ShowAtmosphere == show) return;
+
+        ShowAtmosphere = show;
+        OnAtmosphereToggled?.Invoke(ShowAtmosphere);
     }
 
     private void ApplyModeToAllPlanets()

@@ -15,12 +15,12 @@ MonoBehaviour:
   modeName: Temperature
   modeType: 0
   scaleType: 2
-  absoluteMin: 0
-  absoluteMax: 10000
-  minColor: {r: 1, g: 1, b: 1, a: 1}
-  maxColor: {r: 0.14150941, g: 0, b: 0, a: 1}
+  absoluteMin: 200
+  absoluteMax: 500
+  minColor: {r: 0, g: 0.05725074, b: 1, a: 1}
+  maxColor: {r: 0.7735849, g: 0, b: 0, a: 1}
   useAnchors: 1
-  anchor1Value: 0
-  anchor1Color: {r: 0, g: 0.15447223, b: 1, a: 1}
-  anchor2Value: 100
-  anchor2Color: {r: 1, g: 0.15715533, b: 0.0990566, a: 1}
+  anchor1Value: 273
+  anchor1Color: {r: 1, g: 1, b: 1, a: 1}
+  anchor2Value: 300
+  anchor2Color: {r: 0.03702387, g: 0.6037736, b: 0.05767999, a: 1}
