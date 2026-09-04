@@ -107,7 +107,6 @@ public static class GeneratorUtility
         return 32.0f * (n0 + n1 + n2 + n3);
     }
 
-
     public static float FBM(Vector3 pos, float scale, float offset, int octaves)
     {
         float total = 0f;
@@ -154,6 +153,9 @@ public static class GeneratorUtility
         data.topologies = new CellTopology[cellCount];
         data.climates = new CellClimate[cellCount];
         data.economies = new CellEconomy[cellCount];
-        data.visualDataArray = new CellVisualData[cellCount];
+
+        data.terrainVisuals = new TerrainVisualData[cellCount];
+        data.overlayVisuals = new OverlayVisualData[cellCount];
+        data.windVisuals = new WindVisualData[cellCount];
     }
 }

@@ -28,7 +28,6 @@ public struct PlanetClimateState
     public byte secondaryBedrockId;
     public Vector4 dominantBedrockColor;
     public Vector4 secondaryBedrockColor;
-    public Vector3 iceColor;
 }
 
 [BurstCompile]
@@ -36,7 +35,7 @@ public struct ClimateEquilibriumJob : IJobParallelFor
 {
     [ReadOnly] public NativeArray<CellTopology> topologies;
     public NativeArray<CellClimate> climates;
-    public NativeArray<CellVisualData> visuals;
+    public NativeArray<TerrainVisualData> terrainVisuals;
 
     public PlanetClimateState state;
 
@@ -70,14 +69,7 @@ public struct ClimateEquilibriumJob : IJobParallelFor
         localTemp = Mathf.Lerp(localTemp, baseTemp, blendFactor);
         clim.localTemperature = localTemp;
 
-        if (state.waterLevel > -5000f && topo.altitude < state.waterLevel)
-        {
-            clim.liquidDepth = (state.waterLevel - topo.altitude) / 1000f;
-        }
-        else
-        {
-            clim.liquidDepth = 0f;
-        }
+        if (state.waterLevel <= -5000f) clim.liquidDepth = 0f;
 
         if (clim.liquidDepth > 0) clim.moisture = 1.0f;
         else clim.moisture = topo.rainFactor * state.globalRainStrength;
@@ -88,15 +80,8 @@ public struct ClimateEquilibriumJob : IJobParallelFor
             float baselineFrost = degreesBelow * 0.02f;
             clim.snowDepth = Mathf.Max(baselineFrost, clim.moisture * degreesBelow * 0.1f);
 
-            if (clim.liquidDepth > 0)
-            {
-                clim.iceCover = 1.0f;
-                clim.liquidDepth = 0f;
-            }
-            else
-            {
-                clim.iceCover = Mathf.Clamp01(clim.snowDepth);
-            }
+            if (clim.liquidDepth > 0) clim.iceCover = 1.0f;
+            else clim.iceCover = Mathf.Clamp01(clim.snowDepth);
         }
         else if (localTemp > state.boilingPoint)
         {
@@ -136,13 +121,10 @@ public struct ClimateEquilibriumJob : IJobParallelFor
         Vector4 currentSoilCol = Vector4.Lerp(state.soilDryColor, state.soilWetColor, clim.moisture);
         Vector4 finalGroundCol = Vector4.Lerp(bedrockCol, currentSoilCol, thickness);
 
-        CellVisualData vis = visuals[i];
+        TerrainVisualData vis = terrainVisuals[i];
         vis.bedrockColor = finalGroundCol;
         vis.surfaceData = new Vector4(clim.iceCover, clim.biomass, clim.liquidDepth, 0f);
-        vis.iceColorR = state.iceColor.x;
-        vis.iceColorG = state.iceColor.y;
-        vis.iceColorB = state.iceColor.z;
-        visuals[i] = vis;
+        terrainVisuals[i] = vis;
     }
 }
 
@@ -156,13 +138,13 @@ public class ClimateResolver : MonoBehaviour
         public PlanetMeshData meshData;
         public NativeArray<CellTopology> topologies;
         public NativeArray<CellClimate> climates;
-        public NativeArray<CellVisualData> visuals;
+        public NativeArray<TerrainVisualData> terrainVisuals;
 
         public void Dispose()
         {
             if (topologies.IsCreated) topologies.Dispose();
             if (climates.IsCreated) climates.Dispose();
-            if (visuals.IsCreated) visuals.Dispose();
+            if (terrainVisuals.IsCreated) terrainVisuals.Dispose();
         }
     }
 
@@ -197,7 +179,7 @@ public class ClimateResolver : MonoBehaviour
                 meshData = body.localViewData,
                 topologies = new NativeArray<CellTopology>(body.localViewData.topologies, Allocator.Persistent),
                 climates = new NativeArray<CellClimate>(body.localViewData.climates, Allocator.Persistent),
-                visuals = new NativeArray<CellVisualData>(body.localViewData.visualDataArray, Allocator.Persistent)
+                terrainVisuals = new NativeArray<TerrainVisualData>(body.localViewData.terrainVisuals, Allocator.Persistent) // FIXED
             });
         }
 
@@ -249,8 +231,6 @@ public class ClimateResolver : MonoBehaviour
                     float globalSoil = body.soilBaseThickness * (1.0f + (float)body.surfacePressureAtm) * (float)(body.surfaceGravity / 9.8) * (1.0f + rainStrength);
                     globalSoil = Mathf.Clamp(globalSoil, 0.1f, 3.0f);
 
-                    Color iceCol = body.oceanLiquid != null ? body.oceanLiquid.iceColor : Color.white;
-
                     PlanetClimateState state = new PlanetClimateState
                     {
                         blackbodyTemp = blackbody,
@@ -272,15 +252,14 @@ public class ClimateResolver : MonoBehaviour
                         dominantBedrockId = body.dominantBedrockId,
                         secondaryBedrockId = body.secondaryBedrockId,
                         dominantBedrockColor = body.dominantBedrockColor,
-                        secondaryBedrockColor = body.secondaryBedrockColor,
-                        iceColor = new Vector3(iceCol.r, iceCol.g, iceCol.b)
+                        secondaryBedrockColor = body.secondaryBedrockColor
                     };
 
                     ClimateEquilibriumJob job = new ClimateEquilibriumJob
                     {
                         topologies = simData.topologies,
                         climates = simData.climates,
-                        visuals = simData.visuals,
+                        terrainVisuals = simData.terrainVisuals,
                         state = state
                     };
 
@@ -296,11 +275,11 @@ public class ClimateResolver : MonoBehaviour
 
                     foreach (var simData in simDataList)
                     {
-                        simData.visuals.CopyTo(simData.meshData.visualDataArray);
+                        simData.terrainVisuals.CopyTo(simData.meshData.terrainVisuals);
                         simData.climates.CopyTo(simData.meshData.climates);
 
-                        CellVisualData[] highResArray = simData.body.localViewData.visualDataArray;
-                        CellVisualData[] lowResArray = simData.body.systemViewData.visualDataArray;
+                        TerrainVisualData[] highResArray = simData.body.localViewData.terrainVisuals;
+                        TerrainVisualData[] lowResArray = simData.body.systemViewData.terrainVisuals;
                         int[] map = simData.body.lowToHighMap;
 
                         for (int j = 0; j < lowResArray.Length; j++) lowResArray[j] = highResArray[map[j]];
@@ -311,7 +290,7 @@ public class ClimateResolver : MonoBehaviour
                         if (body.visualObject != null)
                         {
                             Planet p = body.visualObject.GetComponent<Planet>();
-                            if (p != null) p.UpdateVisualBuffer();
+                            if (p != null) p.UpdateTerrainBuffer();
                         }
                     }
                     await Task.Yield();

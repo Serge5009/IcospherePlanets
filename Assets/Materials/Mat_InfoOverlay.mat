@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: PoliticalLayer
+  m_Name: Mat_InfoOverlay
   m_Shader: {fileID: -6465566751694194690, guid: 56b9dd9df2e9ff04aba901682311ee83, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0

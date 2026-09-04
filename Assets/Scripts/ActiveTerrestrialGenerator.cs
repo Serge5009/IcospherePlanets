@@ -98,7 +98,6 @@ public class ActiveTerrestrialGenerator : IPlanetGenerator
             TectonicPlate secondary = plates[secondClosestPlateIdx];
 
             float borderDistance = secondClosestDist - closestDist;
-
             float shelfBlend = Mathf.SmoothStep(0.0f, 0.3f, borderDistance);
             float baseAlt = Mathf.Lerp((primary.baseElevation + secondary.baseElevation) * 0.5f, primary.baseElevation, shelfBlend);
 
@@ -114,12 +113,9 @@ public class ActiveTerrestrialGenerator : IPlanetGenerator
 
                 if (convergence > 0.1f)
                 {
-                    if (!primary.isOceanic && !secondary.isOceanic)
-                        faultLineModifier = borderIntensity * 6000f * convergence;
-                    else if (primary.isOceanic && secondary.isOceanic)
-                        faultLineModifier = borderIntensity * 1500f * convergence;
-                    else
-                        faultLineModifier = primary.isOceanic ? borderIntensity * -4000f * convergence : borderIntensity * 5000f * convergence;
+                    if (!primary.isOceanic && !secondary.isOceanic) faultLineModifier = borderIntensity * 6000f * convergence;
+                    else if (primary.isOceanic && secondary.isOceanic) faultLineModifier = borderIntensity * 1500f * convergence;
+                    else faultLineModifier = primary.isOceanic ? borderIntensity * -4000f * convergence : borderIntensity * 5000f * convergence;
                 }
                 else if (convergence < -0.1f)
                 {
@@ -203,7 +199,10 @@ public class ActiveTerrestrialGenerator : IPlanetGenerator
             };
 
             data.economies[i] = new CellEconomy { ownerId = 0, population = 0, infrastructureCap = 0.1f, developmentCap = 0.05f };
-            data.visualDataArray[i] = new CellVisualData { bedrockColor = primary.bedrockColor, liquidColor = body.oceanColor, surfaceData = new Vector4(0f, 0f, data.climates[i].liquidDepth, 0f), isHovered = 0 };
+
+            data.terrainVisuals[i] = new TerrainVisualData { bedrockColor = primary.bedrockColor, liquidColor = body.oceanColor, surfaceData = new Vector4(0f, 0f, data.climates[i].liquidDepth, 0f) };
+
+            data.overlayVisuals[i] = new OverlayVisualData { overlayColor = new Vector4(0, 0, 0, 0) };
         }
 
         return data;

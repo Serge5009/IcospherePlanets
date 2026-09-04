@@ -6,13 +6,16 @@ public class Planet : MonoBehaviour
     public CelestialBody bodyData;
     public PlanetMeshData meshData;
 
-    private ComputeBuffer visualBuffer;
+    private ComputeBuffer terrainBuffer;
+    private ComputeBuffer overlayBuffer;
+    private ComputeBuffer windBuffer;
+
     public MeshRenderer terrainRenderer;
-    public MeshRenderer politicalRenderer;
+    public MeshRenderer overlayRenderer;
 
     private int currentHoveredCellId = -1;
 
-    public void InitializeFromData(CelestialBody body, PlanetMeshData data, Material terrainMat, Material polMat, bool isLocalView)
+    public void InitializeFromData(CelestialBody body, PlanetMeshData data, Material terrainMat, Material overlayMat, bool isLocalView)
     {
         this.bodyData = body;
         this.meshData = data;
@@ -23,18 +26,18 @@ public class Planet : MonoBehaviour
         terrainRenderer = gameObject.AddComponent<MeshRenderer>();
         terrainRenderer.sharedMaterial = terrainMat;
 
-        GameObject polObj = new GameObject("Political Overlay");
-        polObj.transform.SetParent(transform);
-        polObj.transform.localPosition = Vector3.zero;
-        polObj.transform.localScale = Vector3.one * 1.002f;
+        GameObject overlayObj = new GameObject("Overlay Shell");
+        overlayObj.transform.SetParent(transform);
+        overlayObj.transform.localPosition = Vector3.zero;
+        overlayObj.transform.localScale = Vector3.one * 1.001f;
 
-        MeshFilter polFilter = polObj.AddComponent<MeshFilter>();
-        polFilter.sharedMesh = data.sharedMesh;
+        MeshFilter overlayFilter = overlayObj.AddComponent<MeshFilter>();
+        overlayFilter.sharedMesh = data.sharedMesh;
 
-        politicalRenderer = polObj.AddComponent<MeshRenderer>();
-        politicalRenderer.sharedMaterial = polMat;
+        overlayRenderer = overlayObj.AddComponent<MeshRenderer>();
+        overlayRenderer.sharedMaterial = overlayMat;
 
-        politicalRenderer.enabled = isLocalView;
+        overlayRenderer.enabled = isLocalView;
 
         SphereCollider sc = gameObject.GetComponent<SphereCollider>();
         if (sc == null) sc = gameObject.AddComponent<SphereCollider>();
@@ -47,15 +50,22 @@ public class Planet : MonoBehaviour
             link.body = body;
         }
 
-        int stride = Marshal.SizeOf(typeof(CellVisualData));
-        visualBuffer = new ComputeBuffer(data.visualDataArray.Length, stride);
-        visualBuffer.SetData(data.visualDataArray);
+        terrainBuffer = new ComputeBuffer(data.terrainVisuals.Length, Marshal.SizeOf(typeof(TerrainVisualData)));
+        terrainBuffer.SetData(data.terrainVisuals);
 
-        MaterialPropertyBlock propBlock = new MaterialPropertyBlock();
-        propBlock.SetBuffer("_CellVisualData", visualBuffer);
+        overlayBuffer = new ComputeBuffer(data.overlayVisuals.Length, Marshal.SizeOf(typeof(OverlayVisualData)));
+        overlayBuffer.SetData(data.overlayVisuals);
 
-        terrainRenderer.SetPropertyBlock(propBlock);
-        politicalRenderer.SetPropertyBlock(propBlock);
+        windBuffer = new ComputeBuffer(data.windVisuals.Length, Marshal.SizeOf(typeof(WindVisualData)));
+        windBuffer.SetData(data.windVisuals);
+
+        MaterialPropertyBlock terrainBlock = new MaterialPropertyBlock();
+        terrainBlock.SetBuffer("_TerrainVisualData", terrainBuffer);
+        terrainRenderer.SetPropertyBlock(terrainBlock);
+
+        MaterialPropertyBlock overlayBlock = new MaterialPropertyBlock();
+        overlayBlock.SetBuffer("_OverlayVisualData", overlayBuffer);
+        overlayRenderer.SetPropertyBlock(overlayBlock);
 
         if ((body.surfacePressureAtm >= 0.05 || body.bodyType == BodyType.Star) && SystemDisplayManager.Instance.atmosphereMaterial != null)
         {
@@ -89,6 +99,7 @@ public class Planet : MonoBehaviour
                 if (body.atmosphereVisualOpacity >= 0.99f)
                 {
                     terrainRenderer.enabled = false;
+                    overlayRenderer.enabled = false;
                 }
             }
         }
@@ -98,34 +109,46 @@ public class Planet : MonoBehaviour
     {
         if (currentHoveredCellId == cellId) return;
 
-        if (currentHoveredCellId >= 0 && currentHoveredCellId < meshData.visualDataArray.Length)
+        float baseAlpha = (MapModeManager.Instance != null && MapModeManager.Instance.ActiveMode != null) ? 0.85f : 0f;
+
+        if (currentHoveredCellId >= 0 && currentHoveredCellId < meshData.overlayVisuals.Length)
         {
-            meshData.visualDataArray[currentHoveredCellId].isHovered = 0;
+            Vector4 col = meshData.overlayVisuals[currentHoveredCellId].overlayColor;
+            col.w = baseAlpha;
+            meshData.overlayVisuals[currentHoveredCellId].overlayColor = col;
         }
 
         currentHoveredCellId = cellId;
-        if (currentHoveredCellId >= 0 && currentHoveredCellId < meshData.visualDataArray.Length)
+        if (currentHoveredCellId >= 0 && currentHoveredCellId < meshData.overlayVisuals.Length)
         {
-            meshData.visualDataArray[currentHoveredCellId].isHovered = 1;
+            Vector4 col = meshData.overlayVisuals[currentHoveredCellId].overlayColor;
+            col.w = 1f;
+            meshData.overlayVisuals[currentHoveredCellId].overlayColor = col;
         }
 
-        UpdateVisualBuffer();
+        UpdateOverlayBuffer();
     }
 
-    public void UpdateVisualBuffer()
+    public void UpdateTerrainBuffer()
     {
-        if (visualBuffer != null && meshData != null && meshData.visualDataArray != null)
+        if (terrainBuffer != null && meshData != null && meshData.terrainVisuals != null)
         {
-            visualBuffer.SetData(meshData.visualDataArray);
+            terrainBuffer.SetData(meshData.terrainVisuals);
+        }
+    }
+
+    public void UpdateOverlayBuffer()
+    {
+        if (overlayBuffer != null && meshData != null && meshData.overlayVisuals != null)
+        {
+            overlayBuffer.SetData(meshData.overlayVisuals);
         }
     }
 
     private void OnDestroy()
     {
-        if (visualBuffer != null)
-        {
-            visualBuffer.Release();
-            visualBuffer = null;
-        }
+        if (terrainBuffer != null) terrainBuffer.Release();
+        if (overlayBuffer != null) overlayBuffer.Release();
+        if (windBuffer != null) windBuffer.Release();
     }
 }

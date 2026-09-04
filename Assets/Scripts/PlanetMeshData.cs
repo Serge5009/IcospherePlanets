@@ -7,6 +7,7 @@ public class PlanetMeshData
     public CellTopology[] topologies;
     public CellClimate[] climates;
     public CellEconomy[] economies;
-
-    public CellVisualData[] visualDataArray;
+    public TerrainVisualData[] terrainVisuals;
+    public OverlayVisualData[] overlayVisuals;
+    public WindVisualData[] windVisuals;
 }

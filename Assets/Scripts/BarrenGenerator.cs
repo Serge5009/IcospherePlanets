@@ -47,7 +47,9 @@ public class BarrenGenerator : IPlanetGenerator
 
             data.climates[i] = new CellClimate { localTemperature = 200f, storedHeat = 50f, moisture = 0f, snowDepth = 0f, iceCover = 0f, liquidDepth = 0f, biomass = 0f };
             data.economies[i] = new CellEconomy { ownerId = 0, population = 0, infrastructureCap = 0.1f, developmentCap = 0.05f };
-            data.visualDataArray[i] = new CellVisualData { bedrockColor = body.dominantBedrockColor, liquidColor = Vector4.zero, surfaceData = Vector4.zero, isHovered = 0 };
+
+            data.terrainVisuals[i] = new TerrainVisualData { bedrockColor = body.dominantBedrockColor, liquidColor = Vector4.zero, surfaceData = Vector4.zero };
+            data.overlayVisuals[i] = new OverlayVisualData { overlayColor = new Vector4(0, 0, 0, 0) };
         }
 
         return data;

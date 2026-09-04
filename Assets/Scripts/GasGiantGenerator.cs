@@ -20,7 +20,8 @@ public class GasGiantGenerator : IPlanetGenerator
             float bandNoise = GeneratorUtility.FBM(new Vector3(0, localPos.y * 10f, 0), 1f, noiseOffset, 3);
             Color bandColor = Color.Lerp(new Color(0.8f, 0.7f, 0.6f), new Color(0.6f, 0.4f, 0.3f), bandNoise);
 
-            data.visualDataArray[i] = new CellVisualData { bedrockColor = bandColor, liquidColor = Vector4.zero, surfaceData = Vector4.zero, isHovered = 0 };
+            data.terrainVisuals[i] = new TerrainVisualData { bedrockColor = bandColor, liquidColor = Vector4.zero, surfaceData = Vector4.zero };
+            data.overlayVisuals[i] = new OverlayVisualData { overlayColor = new Vector4(0, 0, 0, 0) };
         }
 
         return data;

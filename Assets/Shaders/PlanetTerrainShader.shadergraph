@@ -177,6 +177,29 @@
 
 {
     "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.Vector3MaterialSlot",
+    "m_ObjectId": "26562a210dd7409fb4c025026b555320",
+    "m_Id": 3,
+    "m_DisplayName": "terrainColor",
+    "m_SlotType": 1,
+    "m_Hidden": false,
+    "m_ShaderOutputName": "terrainColor",
+    "m_StageCapability": 3,
+    "m_Value": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "m_DefaultValue": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+    },
+    "m_Labels": []
+}
+
+{
+    "m_SGVersion": 0,
     "m_Type": "UnityEditor.ShaderGraph.Vector1MaterialSlot",
     "m_ObjectId": "437bbb00e3f94463b68d5d054b574325",
     "m_Id": 0,
@@ -187,22 +210,6 @@
     "m_StageCapability": 2,
     "m_Value": 1.0,
     "m_DefaultValue": 1.0,
-    "m_Labels": [],
-    "m_LiteralMode": false
-}
-
-{
-    "m_SGVersion": 0,
-    "m_Type": "UnityEditor.ShaderGraph.Vector1MaterialSlot",
-    "m_ObjectId": "4527b61b6898448085acd22fcb4bca0d",
-    "m_Id": 2,
-    "m_DisplayName": "isHovered",
-    "m_SlotType": 1,
-    "m_Hidden": false,
-    "m_ShaderOutputName": "isHovered",
-    "m_StageCapability": 3,
-    "m_Value": 0.0,
-    "m_DefaultValue": 0.0,
     "m_Labels": [],
     "m_LiteralMode": false
 }
@@ -738,31 +745,6 @@
 
 {
     "m_SGVersion": 0,
-    "m_Type": "UnityEditor.ShaderGraph.Vector4MaterialSlot",
-    "m_ObjectId": "db1a9d43a5d5439b89b789d67ffd7a8f",
-    "m_Id": 1,
-    "m_DisplayName": "cellColor",
-    "m_SlotType": 1,
-    "m_Hidden": false,
-    "m_ShaderOutputName": "cellColor",
-    "m_StageCapability": 3,
-    "m_Value": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0,
-        "w": 0.0
-    },
-    "m_DefaultValue": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0,
-        "w": 0.0
-    },
-    "m_Labels": []
-}
-
-{
-    "m_SGVersion": 0,
     "m_Type": "UnityEditor.ShaderGraph.BlockNode",
     "m_ObjectId": "df226da63bf8433e911d82915dd42cec",
     "m_Group": {
@@ -821,38 +803,13 @@
 }
 
 {
-    "m_SGVersion": 0,
-    "m_Type": "UnityEditor.ShaderGraph.Vector4MaterialSlot",
-    "m_ObjectId": "eb6df57826fe44ce9e26e04b9fac1dfe",
-    "m_Id": 3,
-    "m_DisplayName": "terrainColor",
-    "m_SlotType": 1,
-    "m_Hidden": false,
-    "m_ShaderOutputName": "terrainColor",
-    "m_StageCapability": 3,
-    "m_Value": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0,
-        "w": 0.0
-    },
-    "m_DefaultValue": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0,
-        "w": 0.0
-    },
-    "m_Labels": []
-}
-
-{
     "m_SGVersion": 1,
     "m_Type": "UnityEditor.ShaderGraph.CustomFunctionNode",
     "m_ObjectId": "f21ed9f515f74cccb9fcd61bf4d39afa",
     "m_Group": {
         "m_Id": ""
     },
-    "m_Name": "GetCellData (Custom Function)",
+    "m_Name": "GetTerrainData (Custom Function)",
     "m_DrawState": {
         "m_Expanded": true,
         "m_Position": {
@@ -868,13 +825,7 @@
             "m_Id": "d66addcc8a4e4178a4606d3373155848"
         },
         {
-            "m_Id": "eb6df57826fe44ce9e26e04b9fac1dfe"
-        },
-        {
-            "m_Id": "db1a9d43a5d5439b89b789d67ffd7a8f"
-        },
-        {
-            "m_Id": "4527b61b6898448085acd22fcb4bca0d"
+            "m_Id": "26562a210dd7409fb4c025026b555320"
         }
     ],
     "synonyms": [
@@ -889,8 +840,8 @@
         "m_SerializableColors": []
     },
     "m_SourceType": 0,
-    "m_FunctionName": "GetCellData",
-    "m_FunctionSource": "3e1b02bb3061bbb42a7091567aff0e71",
+    "m_FunctionName": "GetTerrainData",
+    "m_FunctionSource": "784b9159ad66a7d40b33f6f1532c55f5",
     "m_FunctionSourceUsePragmas": true,
     "m_FunctionBody": "Enter function body here..."
 }
