@@ -10,7 +10,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fd50b2ad4389c4d4ca06ba8156901bc3, type: 3}
-  m_Name: France
+  m_Name: Oman
   m_EditorClassIdentifier: Assembly-CSharp::NationTemplate
-  nationName: France
-  defaultColor: {r: 0.40472588, g: 0.48209488, b: 0.8018868, a: 1}
+  nationName: Oman
+  defaultColor: {r: 0.8588236, g: 0.09019608, b: 0.10588236, a: 1}
+  secondaryColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}

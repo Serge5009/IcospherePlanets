@@ -10,7 +10,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fd50b2ad4389c4d4ca06ba8156901bc3, type: 3}
-  m_Name: Brazil
+  m_Name: Nigeria
   m_EditorClassIdentifier: Assembly-CSharp::NationTemplate
-  nationName: Brazil
-  defaultColor: {r: 0.16577145, g: 0.7058824, b: 0.10196076, a: 1}
+  nationName: Nigeria
+  defaultColor: {r: 0.12224101, g: 0.38679248, b: 0.1818064, a: 1}
+  secondaryColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
