@@ -15,6 +15,7 @@ MonoBehaviour:
   bedrockId: 6
   bedrockName: Banded Iron Formation
   meltingPointKelvin: 1500
+  coreMassModifier: 0.6
   baseColor: {r: 0.6603774, g: 0.38378397, b: 0.28969383, a: 1}
   potentialResources:
   - resource: {fileID: 11400000, guid: 21de14e7cf1232a49885f61244cabd89, type: 2}

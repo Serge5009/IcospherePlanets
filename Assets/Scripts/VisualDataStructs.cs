@@ -4,7 +4,13 @@ public struct TerrainVisualData
 {
     public Vector4 bedrockColor;
     public Vector4 liquidColor;
+
     public Vector4 surfaceData;
+
+    public float iceColorR;
+    public float iceColorG;
+    public float iceColorB;
+    public float padding;
 }
 
 public struct OverlayVisualData

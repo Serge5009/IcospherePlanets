@@ -6,6 +6,10 @@ struct TerrainVisualData
     float4 bedrockColor;
     float4 liquidColor;
     float4 surfaceData;
+    float iceColorR;
+    float iceColorG;
+    float iceColorB;
+    float padding;
 };
 
 StructuredBuffer<TerrainVisualData> _TerrainVisualData;
@@ -27,7 +31,7 @@ void GetTerrainData_float(float2 encodedId, out float3 OutColor)
     float3 biomassColor = float3(0.15, 0.45, 0.15);
     finalColor = lerp(finalColor, biomassColor, data.surfaceData.y);
 
-    float3 iceColor = float3(1.0, 1.0, 1.0);
+    float3 iceColor = float3(data.iceColorR, data.iceColorG, data.iceColorB);
     finalColor = lerp(finalColor, iceColor, data.surfaceData.x);
     
     OutColor = finalColor;

@@ -15,6 +15,7 @@ MonoBehaviour:
   bedrockId: 2
   bedrockName: KREEP Basalt
   meltingPointKelvin: 1123
+  coreMassModifier: 0.35
   baseColor: {r: 0.2264151, g: 0.06336527, b: 0.013883951, a: 1}
   potentialResources:
   - resource: {fileID: 11400000, guid: 9727f670ff7d73a4a888bb60e668e009, type: 2}

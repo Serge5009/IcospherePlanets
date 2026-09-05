@@ -18,5 +18,6 @@ MonoBehaviour:
   toxicity: 0.1
   molarMass: 44.01
   formsClouds: 0
+  isCarbonCycleGas: 1
   skyColor: {r: 0, g: 0.20811898, b: 0.5283019, a: 1}
   cloudColor: {r: 1, g: 1, b: 1, a: 0.8}

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 [Serializable]
@@ -183,44 +184,34 @@ public class SystemDataGenerator : MonoBehaviour
             body.dominantBedrock = GetRandomBedrock(innerBedrocks);
             body.secondaryBedrock = GetRandomBedrock(innerBedrocks);
             body.surfaceSoil = GetRandomSoil(innerSoils);
-            body.oceanLiquid = null;
         }
         else if (distanceAU < frostLine * 1.2)
         {
             body.dominantBedrock = GetRandomBedrock(habitableBedrocks);
             body.secondaryBedrock = GetRandomBedrock(habitableBedrocks);
             body.surfaceSoil = GetRandomSoil(habitableSoils);
-            body.oceanLiquid = GetRandomLiquid(habitableLiquids);
         }
         else
         {
             body.dominantBedrock = GetRandomBedrock(outerBedrocks);
             body.secondaryBedrock = GetRandomBedrock(outerBedrocks);
             body.surfaceSoil = GetRandomSoil(outerSoils);
-            body.oceanLiquid = GetRandomLiquid(outerLiquids);
         }
 
-        body.dominantBedrockId = body.dominantBedrock != null ? body.dominantBedrock.bedrockId : (byte)1;
+        body.dominantBedrockId = body.dominantBedrock != null ? body.dominantBedrock.bedrockId : (byte)0;
         body.dominantBedrockColor = body.dominantBedrock != null ? body.dominantBedrock.baseColor : Color.gray;
 
-        body.secondaryBedrockId = body.secondaryBedrock != null ? body.secondaryBedrock.bedrockId : (byte)1;
+        body.secondaryBedrockId = body.secondaryBedrock != null ? body.secondaryBedrock.bedrockId : (byte)0;
         body.secondaryBedrockColor = body.secondaryBedrock != null ? body.secondaryBedrock.baseColor : Color.gray;
-
-        body.oceanColor = body.oceanLiquid != null ? body.oceanLiquid.shallowColor : Color.blue;
 
         body.soilId = body.surfaceSoil != null ? body.surfaceSoil.soilId : (byte)0;
         body.soilDryColor = body.surfaceSoil != null ? body.surfaceSoil.dryColor : new Color(0.7f, 0.6f, 0.4f);
         body.soilWetColor = body.surfaceSoil != null ? body.surfaceSoil.wetColor : new Color(0.3f, 0.2f, 0.1f);
         body.soilBaseThickness = body.surfaceSoil != null ? body.surfaceSoil.baseThicknessMultiplier : 1.0f;
 
-        if (body.oceanLiquid != null && body.bodyType == BodyType.RockyPlanet && UnityEngine.Random.value > 0.5f)
-        {
-            body.waterLevel = UnityEngine.Random.Range(-2000f, 2000f);
-        }
-        else
-        {
-            body.waterLevel = -9999f;
-        }
+        body.oceanLiquid = null;
+        body.oceanColor = Color.black;
+        body.waterLevel = -9999f;
     }
 
     private void CalculateCoreAndMagnetosphere(CelestialBody body)
@@ -234,9 +225,8 @@ public class SystemDataGenerator : MonoBehaviour
             return;
         }
 
-        body.coreMassFraction = UnityEngine.Random.Range(0.2f, 0.5f);
-        if (body.dominantBedrock != null && body.dominantBedrock.bedrockName.Contains("Metallic")) body.coreMassFraction = UnityEngine.Random.Range(0.5f, 0.75f);
-        else if (body.dominantBedrock != null && body.dominantBedrock.bedrockName.Contains("Carbon")) body.coreMassFraction = UnityEngine.Random.Range(0.05f, 0.15f);
+        float baseCoreMod = body.dominantBedrock != null ? body.dominantBedrock.coreMassModifier : 0.3f;
+        body.coreMassFraction = UnityEngine.Random.Range(baseCoreMod * 0.8f, baseCoreMod * 1.2f);
 
         float baseHeat = 6000f * Mathf.Pow((float)body.massEarths, 0.5f);
 
@@ -304,19 +294,12 @@ public class SystemDataGenerator : MonoBehaviour
                 }
             }
 
-            if (body.waterLevel > -5000f && body.oceanLiquid != null && body.oceanLiquid.evaporatesInto != null)
-            {
-                byte vaporId = body.oceanLiquid.evaporatesInto.gasId;
-                if (!body.atmosphericGasesKg.ContainsKey(vaporId)) body.atmosphericGasesKg[vaporId] = 0;
-                body.atmosphericGasesKg[vaporId] += finalMass * UnityEngine.Random.Range(0.01f, 0.05f);
-            }
 
             UpdateAtmosphericProperties(body);
         }
 
         if (body.surfacePressureAtm < 0.05)
         {
-            body.waterLevel = -9999f;
             if (body.archetype == PlanetArchetype.ActiveTerrestrial)
                 body.archetype = PlanetArchetype.DeadTerrestrial;
         }
@@ -325,6 +308,89 @@ public class SystemDataGenerator : MonoBehaviour
             body.atmosphereCloudScale = Mathf.Pow(20f, UnityEngine.Random.value);
         else
             body.atmosphereCloudScale = UnityEngine.Random.Range(2.5f, 10f);
+    }
+
+    public bool TrySeedOceans(CelestialBody body, float maxAltitude)
+    {
+        if (body.waterLevel > -5000f) return false;
+
+        List<LiquidTemplate> allLiquids = new List<LiquidTemplate>();
+        if (DataLibrary.Instance.liquids != null)
+        {
+            allLiquids.AddRange(DataLibrary.Instance.liquids);
+            allLiquids.Sort((a, b) => a.baseFreezingPointKelvin.CompareTo(b.baseFreezingPointKelvin));
+        }
+
+        foreach (var liquid in allLiquids)
+        {
+            if (liquid == null) continue;
+
+            if (body.globalMaxTemperature > liquid.baseBoilingPointKelvin) continue;
+
+            if (body.surfacePressureAtm < 0.05)
+            {
+                if (body.globalMaxTemperature > liquid.baseFreezingPointKelvin) continue;
+            }
+
+            if (body.globalMaxTemperature > liquid.baseFreezingPointKelvin)
+            {
+                ApplyLiquid(body, liquid, maxAltitude);
+                return true;
+            }
+
+            if (body.globalMaxTemperature <= liquid.baseFreezingPointKelvin)
+            {
+                if (UnityEngine.Random.value > 0.5f)
+                {
+                    ApplyLiquid(body, liquid, maxAltitude);
+                    return true;
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+        return false;
+    }
+
+    private void ApplyLiquid(CelestialBody body, LiquidTemplate liquid, float maxAltitude)
+    {
+        body.oceanLiquid = liquid;
+
+        float fillPercentage = UnityEngine.Random.Range(0.2f, 0.6f);
+        body.waterLevel = maxAltitude * fillPercentage;
+
+        body.oceanColor = liquid.shallowColor;
+
+        if (liquid.evaporatesInto != null && body.surfacePressureAtm >= 0.05)
+        {
+            byte vaporId = liquid.evaporatesInto.gasId;
+            if (!body.atmosphericGasesKg.ContainsKey(vaporId)) body.atmosphericGasesKg[vaporId] = 0;
+
+            double baseCapacity = 5.15e18 * body.massEarths;
+            body.atmosphericGasesKg[vaporId] += baseCapacity * 0.02;
+            UpdateAtmosphericProperties(body);
+        }
+
+        Debug.Log($"[Seeding] {body.name} seeded with {liquid.liquidName}. Sea Level: {body.waterLevel:F0}m");
+    }
+
+    public void TriggerRunawayGreenhouse(CelestialBody body)
+    {
+        if (body.oceanLiquid != null && body.oceanLiquid.evaporatesInto != null)
+        {
+            byte vaporId = body.oceanLiquid.evaporatesInto.gasId;
+            if (!body.atmosphericGasesKg.ContainsKey(vaporId)) body.atmosphericGasesKg[vaporId] = 0;
+
+            double baseCapacity = 5.15e18 * body.massEarths;
+            body.atmosphericGasesKg[vaporId] += baseCapacity * 2.0;
+
+            UpdateAtmosphericProperties(body);
+        }
+
+        body.waterLevel = -9999f;
+        Debug.Log($"[Climate] {body.name} suffered a Runaway Greenhouse effect! Oceans boiled dry.");
     }
 
     public void UpdateAtmosphericProperties(CelestialBody body)
@@ -369,7 +435,9 @@ public class SystemDataGenerator : MonoBehaviour
 
         double vaporPressureAtm = ((vaporMassKg * body.surfaceGravity) / surfaceAreaM2) / 101325.0;
 
-        body.greenhouseHeatContribution = totalGreenhouse * (float)body.surfacePressureAtm * 30f;
+        float effectiveGreenhousePressure = Mathf.Log10(1f + (float)body.surfacePressureAtm * 9f);
+        body.greenhouseHeatContribution = totalGreenhouse * effectiveGreenhousePressure * 40f;
+
         body.toxicityLevel = totalToxicity;
 
         body.atmosphereSkyColor = new Color(Mathf.Clamp01(blendedSky.r), Mathf.Clamp01(blendedSky.g), Mathf.Clamp01(blendedSky.b), Mathf.Clamp01(blendedSky.a));

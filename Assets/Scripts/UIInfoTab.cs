@@ -51,7 +51,13 @@ public class UIInfoTab : UITabPanel
             sb.AppendLine($"<b>Core Temp:</b> {currentBody.coreTemperatureKelvin:F0} K ({(currentBody.isCoreActive ? "<color=#55FF55>Active</color>" : "<color=#FF5555>Dead</color>")})");
             sb.AppendLine($"<b>Mag-Shield:</b> {currentBody.magnetosphereStrength:F2}");
 
-            sb.AppendLine("\n<color=#55FFFF><b>--- HYDROLOGY ---</b></color>");
+            sb.AppendLine("\n<color=#55FFFF><b>--- CLIMATE & HYDROLOGY ---</b></color>");
+
+            float minC = currentBody.globalMinTemperature - 273.15f;
+            float maxC = currentBody.globalMaxTemperature - 273.15f;
+            sb.AppendLine($"<b>Min Temp:</b> {currentBody.globalMinTemperature:F1} K ({minC:F1} °C)");
+            sb.AppendLine($"<b>Max Temp:</b> {currentBody.globalMaxTemperature:F1} K ({maxC:F1} °C)");
+
             string liquid = currentBody.oceanLiquid != null ? currentBody.oceanLiquid.liquidName : "None";
             sb.AppendLine($"<b>Ocean Liquid:</b> {liquid}");
 
@@ -62,12 +68,31 @@ public class UIInfoTab : UITabPanel
                 {
                     sb.AppendLine($"<b>Freezing Pt:</b> {currentBody.oceanLiquid.baseFreezingPointKelvin:F1} K");
                     sb.AppendLine($"<b>Boiling Pt:</b> {currentBody.oceanLiquid.baseBoilingPointKelvin:F1} K");
+
+                    if (currentBody.globalMaxTemperature < currentBody.oceanLiquid.baseFreezingPointKelvin)
+                    {
+                        sb.AppendLine("<color=#55AAFF><i>(Global Snowball)</i></color>");
+                    }
                 }
             }
             else if (currentBody.oceanLiquid != null)
             {
-                if (currentBody.surfacePressureAtm < 0.05) sb.AppendLine("<b>Sea Level:</b> <color=#AAAAAA>Vacuum (No Liquid)</color>");
-                else sb.AppendLine("<b>Sea Level:</b> <color=#FF5555>Boiled Dry (Runaway Greenhouse)</color>");
+                float avgTemp = 0;
+                if (currentBody.localViewData != null)
+                {
+                    foreach (var clim in currentBody.localViewData.climates) avgTemp += clim.localTemperature;
+                    avgTemp /= currentBody.localViewData.climates.Length;
+                }
+
+                if (currentBody.surfacePressureAtm < 0.05)
+                {
+                    if (avgTemp < currentBody.oceanLiquid.baseFreezingPointKelvin) sb.AppendLine("<b>Sea Level:</b> <color=#AAAAAA>0m (Frozen Dry / Sublimated)</color>");
+                    else sb.AppendLine("<b>Sea Level:</b> <color=#AAAAAA>0m (Boiled Dry into Vacuum)</color>");
+                }
+                else
+                {
+                    sb.AppendLine("<b>Sea Level:</b> <color=#FF5555>0m (Runaway Greenhouse)</color>");
+                }
             }
             else
             {

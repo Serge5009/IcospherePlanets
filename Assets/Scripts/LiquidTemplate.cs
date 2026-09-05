@@ -10,8 +10,11 @@ public class LiquidTemplate : ScriptableObject
     public float baseFreezingPointKelvin = 273.15f;
     public float baseBoilingPointKelvin = 373.15f;
 
-    [Tooltip("The gas this liquid turns into when it boils or evaporates.")]
     public GasTemplate evaporatesInto;
+
+    [Header("Mechanics")]
+    [Tooltip("Does this liquid dissolve Carbon Cycle gases? (e.g., Water)")]
+    public bool supportsCarbonCycle = false;
 
     [Header("Visuals")]
     public Color shallowColor = new Color(0.2f, 0.6f, 1.0f, 1f);

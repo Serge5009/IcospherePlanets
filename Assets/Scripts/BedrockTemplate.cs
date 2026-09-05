@@ -5,7 +5,6 @@ using UnityEngine;
 public struct ResourceYield
 {
     public ResourceTemplate resource;
-    [Tooltip("Relative weight/chance of this resource generating in this bedrock.")]
     public float weight;
 }
 
@@ -15,8 +14,11 @@ public class BedrockTemplate : ScriptableObject
     public byte bedrockId;
     public string bedrockName;
 
-    [Tooltip("Temperature at which this rock turns into Lava (Kelvin).")]
     public float meltingPointKelvin = 1473.15f;
+
+    [Header("Mechanics")]
+    [Tooltip("How much this bedrock contributes to the planet's core mass. (Silicate = ~0.3, Metallic = ~0.6)")]
+    public float coreMassModifier = 0.3f;
 
     [Header("Visuals")]
     public Color baseColor = Color.gray;

@@ -15,6 +15,7 @@ MonoBehaviour:
   bedrockId: 7
   bedrockName: Carbonatite
   meltingPointKelvin: 600
+  coreMassModifier: 0.1
   baseColor: {r: 0.754717, g: 0.71074075, b: 0.60875756, a: 1}
   potentialResources:
   - resource: {fileID: 11400000, guid: 835c3fd1758660646b38bbc9cf6d4860, type: 2}

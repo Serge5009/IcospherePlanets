@@ -72,6 +72,9 @@ public class CelestialBody
     public float greenhouseHeatContribution;
     public float toxicityLevel;
 
+    public float globalMinTemperature;
+    public float globalMaxTemperature;
+
     public Color atmosphereSkyColor;
     public Color atmosphereCloudColor;
     public float atmosphereVisualScale;
