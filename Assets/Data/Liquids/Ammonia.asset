@@ -14,9 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LiquidTemplate
   liquidId: 3
   liquidName: Ammonia
-  baseFreezingPointKelvin: 195.4
+  baseFreezingPointKelvin: 195.42
   baseBoilingPointKelvin: 239.81
   evaporatesInto: {fileID: 11400000, guid: 951008581c03c324f8b1ffff9341db89, type: 2}
+  supportsCarbonCycle: 0
   shallowColor: {r: 0.60747904, g: 0.3517711, b: 0.8018868, a: 1}
   deepColor: {r: 0.38679248, g: 0.06020827, b: 0.35564256, a: 1}
   iceColor: {r: 0.9622642, g: 0.7761659, b: 0.9346333, a: 1}
