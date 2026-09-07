@@ -122,6 +122,8 @@ public class SystemMeshGenerator : MonoBehaviour
                     IPlanetGenerator generator = generators[body.archetype];
                     body.localViewData = generator.Generate(highMesh, highCenters, body, body.noiseScale, body.noiseOffset, body.waterLevel);
 
+                    body.RebuildHypsometricCurve();
+
                     NativeArray<Vector3> nativeLow = new NativeArray<Vector3>(lowCenters, Allocator.TempJob);
                     NativeArray<Vector3> nativeHigh = new NativeArray<Vector3>(highCenters, Allocator.TempJob);
                     NativeArray<int> nativeMap = new NativeArray<int>(lowCenters.Length, Allocator.TempJob);

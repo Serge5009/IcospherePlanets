@@ -196,6 +196,61 @@ public class Planet : MonoBehaviour
         UpdateOverlayBuffer();
     }
 
+    public void FastUpdateWaterVisuals()
+    {
+        if (bodyData == null) return;
+
+        float wl = bodyData.waterLevel;
+        float freezePt = bodyData.oceanLiquid != null ? bodyData.oceanLiquid.baseFreezingPointKelvin : 273.15f;
+
+        UpdateWaterArray(bodyData.localViewData, wl, freezePt);
+        UpdateWaterArray(bodyData.systemViewData, wl, freezePt);
+
+        foreach (Planet p in ActivePlanets)
+        {
+            if (p.bodyData == this.bodyData)
+            {
+                p.UpdateTerrainBuffer();
+            }
+        }
+    }
+
+    private void UpdateWaterArray(PlanetMeshData data, float wl, float freezePt)
+    {
+        if (data == null || data.topologies == null) return;
+
+        for (int i = 0; i < data.topologies.Length; i++)
+        {
+            float alt = data.topologies[i].altitude;
+            float depth = (wl > 0f && alt < wl) ? (wl - alt) / 1000f : 0f;
+
+            data.climates[i].liquidDepth = depth;
+
+            TerrainVisualData vis = data.terrainVisuals[i];
+            vis.surfaceData.z = depth;
+
+            if (depth > 0 && data.climates[i].localTemperature < freezePt)
+            {
+                vis.surfaceData.x = 1f;
+                vis.surfaceData.z = 0f;
+            }
+            else if (depth > 0)
+            {
+                vis.surfaceData.x = 0f;
+            }
+
+            if (bodyData.oceanLiquid != null)
+            {
+                vis.liquidColor = bodyData.oceanColor;
+                vis.iceColorR = bodyData.oceanLiquid.iceColor.r;
+                vis.iceColorG = bodyData.oceanLiquid.iceColor.g;
+                vis.iceColorB = bodyData.oceanLiquid.iceColor.b;
+            }
+
+            data.terrainVisuals[i] = vis;
+        }
+    }
+
     public void UpdateTerrainBuffer()
     {
         if (terrainBuffer != null && terrainBlock != null)

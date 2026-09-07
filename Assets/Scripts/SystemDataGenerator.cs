@@ -211,6 +211,7 @@ public class SystemDataGenerator : MonoBehaviour
 
         body.oceanLiquid = null;
         body.oceanColor = Color.black;
+        body.oceanVolumeKm3 = 0;
         body.waterLevel = -9999f;
     }
 
@@ -294,7 +295,6 @@ public class SystemDataGenerator : MonoBehaviour
                 }
             }
 
-
             UpdateAtmosphericProperties(body);
         }
 
@@ -312,7 +312,7 @@ public class SystemDataGenerator : MonoBehaviour
 
     public bool TrySeedOceans(CelestialBody body, float maxAltitude)
     {
-        if (body.waterLevel > -5000f) return false;
+        if (body.oceanVolumeKm3 > 0) return false;
 
         List<LiquidTemplate> allLiquids = new List<LiquidTemplate>();
         if (DataLibrary.Instance.liquids != null)
@@ -358,8 +358,12 @@ public class SystemDataGenerator : MonoBehaviour
     {
         body.oceanLiquid = liquid;
 
-        float fillPercentage = UnityEngine.Random.Range(0.2f, 0.6f);
-        body.waterLevel = maxAltitude * fillPercentage;
+        double maxBasinVolume = HypsometricMath.GetVolumeFromLevel(body, maxAltitude);
+
+        float fillPercentage = UnityEngine.Random.Range(0.05f, 0.40f);
+        body.oceanVolumeKm3 = maxBasinVolume * fillPercentage;
+
+        body.waterLevel = HypsometricMath.GetLevelFromVolume(body, body.oceanVolumeKm3);
 
         body.oceanColor = liquid.shallowColor;
 
@@ -373,7 +377,7 @@ public class SystemDataGenerator : MonoBehaviour
             UpdateAtmosphericProperties(body);
         }
 
-        Debug.Log($"[Seeding] {body.name} seeded with {liquid.liquidName}. Sea Level: {body.waterLevel:F0}m");
+        Debug.Log($"[Seeding] {body.name} seeded with {liquid.liquidName}. Volume: {body.oceanVolumeKm3:N0} km3. Sea Level: {body.waterLevel:F0}m");
     }
 
     public void TriggerRunawayGreenhouse(CelestialBody body)
@@ -389,6 +393,7 @@ public class SystemDataGenerator : MonoBehaviour
             UpdateAtmosphericProperties(body);
         }
 
+        body.oceanVolumeKm3 = 0;
         body.waterLevel = -9999f;
         Debug.Log($"[Climate] {body.name} suffered a Runaway Greenhouse effect! Oceans boiled dry.");
     }

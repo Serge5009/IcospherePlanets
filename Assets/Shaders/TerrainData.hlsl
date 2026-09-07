@@ -25,7 +25,7 @@ void GetTerrainData_float(float2 encodedId, out float3 OutColor)
     
     float3 finalColor = data.bedrockColor.rgb;
     
-    float hasLiquid = step(0.01, data.surfaceData.z);
+    float hasLiquid = step(0.0001, data.surfaceData.z);
     finalColor = lerp(finalColor, data.liquidColor.rgb, hasLiquid);
     
     float3 biomassColor = float3(0.15, 0.45, 0.15);

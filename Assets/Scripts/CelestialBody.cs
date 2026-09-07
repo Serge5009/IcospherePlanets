@@ -48,7 +48,11 @@ public class CelestialBody
 
     public float noiseScale;
     public float noiseOffset;
+
+    public double[] hypsometricCurveSqKm;
+    public double oceanVolumeKm3;
     public float waterLevel;
+
     public bool isHighResReady = false;
 
     public BedrockTemplate dominantBedrock;
@@ -118,6 +122,34 @@ public class CelestialBody
 
         float fraction = geometryTemplate.variants[variantIndex].areaFractions[cellId];
         return totalSurfaceAreaSqKm * fraction;
+    }
+
+    public void RebuildHypsometricCurve()
+    {
+        if (localViewData == null || localViewData.topologies == null) return;
+
+        float maxAlt = 0f;
+        foreach (var topo in localViewData.topologies)
+        {
+            if (topo.altitude > maxAlt) maxAlt = topo.altitude;
+        }
+
+        int maxMeter = Mathf.CeilToInt(maxAlt);
+        hypsometricCurveSqKm = new double[maxMeter + 1];
+
+        for (int i = 0; i < localViewData.topologies.Length; i++)
+        {
+            int altMeter = Mathf.FloorToInt(localViewData.topologies[i].altitude);
+            altMeter = Mathf.Clamp(altMeter, 0, maxMeter);
+
+            double area = GetCellAreaSqKm(i);
+            hypsometricCurveSqKm[altMeter] += area;
+        }
+
+        for (int i = 1; i < hypsometricCurveSqKm.Length; i++)
+        {
+            hypsometricCurveSqKm[i] += hypsometricCurveSqKm[i - 1];
+        }
     }
 
     public void AddOrbitingBody(CelestialBody body, OrbitalParameters parameters)
