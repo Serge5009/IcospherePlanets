@@ -100,20 +100,34 @@ public class SelectionManager : MonoBehaviour
                 }
                 else
                 {
-                    Vector3 localHit = planet.transform.InverseTransformPoint(hit.point).normalized;
-
                     int bestId = -1;
-                    float bestDot = -1f;
-                    CellTopology[] topos = planet.meshData.topologies;
 
-                    for (int i = 0; i < topos.Length; i++)
+                    if (hit.collider is SphereCollider)
                     {
-                        float d = Vector3.Dot(topos[i].localPosition, localHit);
-                        if (d > bestDot)
+                        Vector3 localHit = planet.transform.InverseTransformPoint(hit.point).normalized;
+                        float bestDot = -1f;
+                        CellTopology[] topos = planet.meshData.topologies;
+
+                        for (int i = 0; i < topos.Length; i++)
                         {
-                            bestDot = d;
-                            bestId = i;
+                            float d = Vector3.Dot(topos[i].localPosition.normalized, localHit);
+                            if (d > bestDot)
+                            {
+                                bestDot = d;
+                                bestId = i;
+                            }
                         }
+                    }
+                    else if (hit.collider is MeshCollider)
+                    {
+                        Mesh mesh = planet.meshData.sharedMesh;
+                        int[] tris = mesh.triangles;
+                        Vector2[] uvs = mesh.uv2;
+
+                        int vertIndex = tris[hit.triangleIndex * 3];
+                        Vector2 encodedId = uvs[vertIndex];
+
+                        bestId = Mathf.RoundToInt(encodedId.y) * 2000 + Mathf.RoundToInt(encodedId.x);
                     }
 
                     if (bestId != -1)

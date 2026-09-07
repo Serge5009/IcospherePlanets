@@ -30,7 +30,8 @@ public class UIInfoTab : UITabPanel
         sb.AppendLine("<color=#55AAFF><b>--- PHYSICS & ORBIT ---</b></color>");
         sb.AppendLine($"<b>Archetype:</b> {currentBody.archetype}");
         sb.AppendLine($"<b>Mass:</b> {currentBody.massEarths:F3} Earths");
-        sb.AppendLine($"<b>Radius:</b> {currentBody.radiusKm:F0} km");
+        string radiusLabel = currentBody.variantIndex > 0 ? "Mean Radius" : "Radius";
+        sb.AppendLine($"<b>{radiusLabel}:</b> {currentBody.radiusKm:F0} km");
         sb.AppendLine($"<b>Gravity:</b> {currentBody.surfaceGravity:F2} m/s²");
         sb.AppendLine($"<b>Distance:</b> {(currentBody.orbit.semiMajorAxis / AstroMath.AU_TO_KM):F2} AU");
         sb.AppendLine($"<b>Axial Tilt:</b> {currentBody.axialTilt:F1}°");
@@ -138,6 +139,10 @@ public class UIInfoTab : UITabPanel
         StringBuilder sb = new StringBuilder();
 
         sb.AppendLine("<color=#FFAA55><b>--- TOPOLOGY ---</b></color>");
+
+        double cellAreaKm2 = currentBody.GetCellAreaSqKm(currentCellId);
+        sb.AppendLine($"<b>Cell Area:</b> {cellAreaKm2:N0} km²");
+
         BedrockTemplate rock = DataLibrary.Instance.GetBedrock(topo.bedrockId);
         string rockName = rock != null ? rock.bedrockName : "Unknown";
 

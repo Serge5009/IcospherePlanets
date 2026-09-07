@@ -161,8 +161,9 @@ public class ActiveTerrestrialGenerator : IPlanetGenerator
             }
             TectonicPlate primary = plates[closestPlateIdx];
 
-            float cosLat = Mathf.Sqrt(1f - localPos.y * localPos.y);
-            float sinLat = Mathf.Abs(localPos.y);
+            Vector3 normPos = localPos.normalized;
+            float cosLat = Mathf.Sqrt(Mathf.Clamp01(1f - normPos.y * normPos.y));
+            float sinLat = Mathf.Abs(normPos.y);
             float tiltRatio = Mathf.Clamp01((float)body.axialTilt / 90f);
             float insolation = Mathf.Lerp(cosLat, sinLat, tiltRatio);
 
@@ -203,6 +204,7 @@ public class ActiveTerrestrialGenerator : IPlanetGenerator
             data.terrainVisuals[i] = new TerrainVisualData { bedrockColor = primary.bedrockColor, liquidColor = body.oceanColor, surfaceData = new Vector4(0f, 0f, data.climates[i].liquidDepth, 0f) };
 
             data.overlayVisuals[i] = new OverlayVisualData { overlayColor = new Vector4(0, 0, 0, 0) };
+            data.politicalVisuals[i] = new PoliticalVisualData { politicalColor = new Vector4(0, 0, 0, 0) };
         }
 
         return data;

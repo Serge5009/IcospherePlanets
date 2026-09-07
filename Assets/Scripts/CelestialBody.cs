@@ -17,6 +17,8 @@ public class CelestialBody
     public double standardGravitationalParameter;
     public double surfaceGravity;
 
+    public double totalSurfaceAreaSqKm;
+
     public double axialTilt;
     public double rotationPeriodSeconds;
     public bool isTidallyLocked;
@@ -35,6 +37,9 @@ public class CelestialBody
 
     public GameObject visualObject;
     public int dataSubdivisions;
+
+    public HexSphereTemplate geometryTemplate;
+    public int variantIndex;
 
     public PlanetMeshData systemViewData;
     public PlanetMeshData localViewData;
@@ -102,6 +107,17 @@ public class CelestialBody
         double G_SI = 6.67430e-11;
         double radiusMeters = radiusKm * 1000.0;
         this.surfaceGravity = (G_SI * massKg) / (radiusMeters * radiusMeters);
+
+        this.totalSurfaceAreaSqKm = 4.0 * System.Math.PI * (radiusKm * radiusKm);
+    }
+
+    public double GetCellAreaSqKm(int cellId)
+    {
+        if (geometryTemplate == null || geometryTemplate.variants == null || variantIndex >= geometryTemplate.variants.Length)
+            return 0;
+
+        float fraction = geometryTemplate.variants[variantIndex].areaFractions[cellId];
+        return totalSurfaceAreaSqKm * fraction;
     }
 
     public void AddOrbitingBody(CelestialBody body, OrbitalParameters parameters)

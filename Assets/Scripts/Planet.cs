@@ -24,15 +24,8 @@ public class Planet : MonoBehaviour
 
     private int currentHoveredCellId = -1;
 
-    private void OnEnable()
-    {
-        ActivePlanets.Add(this);
-    }
-
-    private void OnDisable()
-    {
-        ActivePlanets.Remove(this);
-    }
+    private void OnEnable() { ActivePlanets.Add(this); }
+    private void OnDisable() { ActivePlanets.Remove(this); }
 
     public void InitializeFromData(CelestialBody body, PlanetMeshData data, Material terrainMat, Material overlayMat, bool isLocalView)
     {
@@ -64,16 +57,19 @@ public class Planet : MonoBehaviour
         politicalRenderer.sharedMaterial = SystemDisplayManager.Instance.politicalMaterial;
         politicalRenderer.enabled = false;
 
-        SphereCollider sc = gameObject.GetComponent<SphereCollider>();
-        if (sc == null) sc = gameObject.AddComponent<SphereCollider>();
-        sc.radius = 1f;
-
-        CelestialBodyLink link = gameObject.GetComponent<CelestialBodyLink>();
-        if (link == null)
+        if (body.variantIndex == 0)
         {
-            link = gameObject.AddComponent<CelestialBodyLink>();
-            link.body = body;
+            SphereCollider sc = gameObject.AddComponent<SphereCollider>();
+            sc.radius = 1f;
         }
+        else
+        {
+            MeshCollider mc = gameObject.AddComponent<MeshCollider>();
+            mc.sharedMesh = data.sharedMesh;
+        }
+
+        CelestialBodyLink link = gameObject.AddComponent<CelestialBodyLink>();
+        link.body = body;
 
         terrainBuffer = new ComputeBuffer(data.terrainVisuals.Length, Marshal.SizeOf(typeof(TerrainVisualData)));
         terrainBuffer.SetData(data.terrainVisuals);
@@ -99,9 +95,18 @@ public class Planet : MonoBehaviour
         polBlock.SetBuffer("_PoliticalVisualData", politicalBuffer);
         politicalRenderer.SetPropertyBlock(polBlock);
 
-        if ((body.surfacePressureAtm >= 0.05 || body.bodyType == BodyType.Star) && SystemDisplayManager.Instance.atmosphereMaterial != null)
+        bool isDistorted = body.variantIndex > 0;
+
+        if (!isDistorted && (body.surfacePressureAtm >= 0.05 || body.bodyType == BodyType.Star) && SystemDisplayManager.Instance.atmosphereMaterial != null)
         {
             Mesh atmosMesh = isLocalView ? SystemDisplayManager.Instance.highResAtmosphereMesh : SystemDisplayManager.Instance.lowResAtmosphereMesh;
+
+            if (atmosMesh == null)
+            {
+                GameObject tempSphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                atmosMesh = tempSphere.GetComponent<MeshFilter>().sharedMesh;
+                Destroy(tempSphere);
+            }
 
             if (atmosMesh != null)
             {

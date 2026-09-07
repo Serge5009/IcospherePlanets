@@ -29,8 +29,9 @@ public class BarrenGenerator : IPlanetGenerator
             Vector3 localPos = cellCenters[i];
             float finalAltitude = rawAltitudes[i] - minAltitude;
 
-            float cosLat = Mathf.Sqrt(1f - localPos.y * localPos.y);
-            float sinLat = Mathf.Abs(localPos.y);
+            Vector3 normPos = localPos.normalized;
+            float cosLat = Mathf.Sqrt(Mathf.Clamp01(1f - normPos.y * normPos.y));
+            float sinLat = Mathf.Abs(normPos.y);
             float tiltRatio = Mathf.Clamp01((float)body.axialTilt / 90f);
             float insolation = Mathf.Lerp(cosLat, sinLat, tiltRatio);
 
@@ -50,6 +51,7 @@ public class BarrenGenerator : IPlanetGenerator
 
             data.terrainVisuals[i] = new TerrainVisualData { bedrockColor = body.dominantBedrockColor, liquidColor = Vector4.zero, surfaceData = Vector4.zero };
             data.overlayVisuals[i] = new OverlayVisualData { overlayColor = new Vector4(0, 0, 0, 0) };
+            data.politicalVisuals[i] = new PoliticalVisualData { politicalColor = new Vector4(0, 0, 0, 0) };
         }
 
         return data;

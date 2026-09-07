@@ -43,8 +43,6 @@ public class SystemMeshGenerator : MonoBehaviour
     public HexSphereTemplate[] bakedTemplates;
 
     private Dictionary<PlanetArchetype, IPlanetGenerator> generators;
-    private Mesh[] cachedMeshes;
-    private Vector3[][] cachedCellCenters;
 
     private void Awake()
     {
@@ -59,33 +57,37 @@ public class SystemMeshGenerator : MonoBehaviour
             { PlanetArchetype.Barren, new BarrenGenerator() },
             { PlanetArchetype.GasGiant, new GasGiantGenerator() }
         };
-
-        if (bakedTemplates != null)
-        {
-            cachedMeshes = new Mesh[bakedTemplates.Length];
-            cachedCellCenters = new Vector3[bakedTemplates.Length][];
-            for (int i = 0; i < bakedTemplates.Length; i++)
-            {
-                if (bakedTemplates[i] != null)
-                {
-                    cachedMeshes[i] = bakedTemplates[i].bakedMesh;
-                    cachedCellCenters[i] = bakedTemplates[i].cellCenters;
-                }
-            }
-        }
     }
 
     public async Task GenerateMeshesAsync(List<CelestialBody> bodies, Action<string> onProgress = null)
     {
-        if (cachedMeshes == null || cachedMeshes.Length == 0) return;
+        if (bakedTemplates == null || bakedTemplates.Length == 0) return;
+
+        foreach (var body in bodies)
+        {
+            int highResSubs = Mathf.Clamp(body.dataSubdivisions, 0, bakedTemplates.Length - 1);
+            body.geometryTemplate = bakedTemplates[highResSubs];
+
+            if ((body.bodyType == BodyType.Asteroid || body.bodyType == BodyType.Comet) && body.geometryTemplate.variants.Length > 1)
+            {
+                body.variantIndex = UnityEngine.Random.Range(1, body.geometryTemplate.variants.Length);
+            }
+            else
+            {
+                body.variantIndex = 0;
+            }
+        }
 
         for (int i = 0; i < bodies.Count; i++)
         {
             var body = bodies[i];
-            int renderSubs = Mathf.Clamp(Mathf.Min(body.dataSubdivisions, systemViewMaxSubdivisions), 0, cachedMeshes.Length - 1);
+            int lowResSubs = Mathf.Clamp(Mathf.Min(body.dataSubdivisions, systemViewMaxSubdivisions), 0, bakedTemplates.Length - 1);
+            HexSphereTemplate lowTemplate = bakedTemplates[lowResSubs];
 
-            Mesh mesh = cachedMeshes[renderSubs];
-            Vector3[] centers = cachedCellCenters[renderSubs];
+            int lowVariantIdx = (lowResSubs == body.dataSubdivisions) ? body.variantIndex : 0;
+
+            Mesh mesh = lowTemplate.variants[lowVariantIdx].bakedMesh;
+            Vector3[] centers = lowTemplate.variants[lowVariantIdx].cellCenters;
 
             IPlanetGenerator generator = generators[body.archetype];
             body.systemViewData = generator.Generate(mesh, centers, body, body.noiseScale, body.noiseOffset, body.waterLevel);
@@ -110,15 +112,15 @@ public class SystemMeshGenerator : MonoBehaviour
                 concurrencySemaphore.Wait();
                 try
                 {
-                    int highResSubs = Mathf.Clamp(body.dataSubdivisions, 0, cachedMeshes.Length - 1);
-                    int lowResSubs = Mathf.Clamp(Mathf.Min(body.dataSubdivisions, systemViewMaxSubdivisions), 0, cachedMeshes.Length - 1);
+                    int lowResSubs = Mathf.Clamp(Mathf.Min(body.dataSubdivisions, systemViewMaxSubdivisions), 0, bakedTemplates.Length - 1);
+                    int lowVariantIdx = (lowResSubs == body.dataSubdivisions) ? body.variantIndex : 0;
+                    Vector3[] lowCenters = bakedTemplates[lowResSubs].variants[lowVariantIdx].cellCenters;
 
-                    Mesh mesh = cachedMeshes[highResSubs];
-                    Vector3[] highCenters = cachedCellCenters[highResSubs];
-                    Vector3[] lowCenters = cachedCellCenters[lowResSubs];
+                    Mesh highMesh = body.geometryTemplate.variants[body.variantIndex].bakedMesh;
+                    Vector3[] highCenters = body.geometryTemplate.variants[body.variantIndex].cellCenters;
 
                     IPlanetGenerator generator = generators[body.archetype];
-                    body.localViewData = generator.Generate(mesh, highCenters, body, body.noiseScale, body.noiseOffset, body.waterLevel);
+                    body.localViewData = generator.Generate(highMesh, highCenters, body, body.noiseScale, body.noiseOffset, body.waterLevel);
 
                     NativeArray<Vector3> nativeLow = new NativeArray<Vector3>(lowCenters, Allocator.TempJob);
                     NativeArray<Vector3> nativeHigh = new NativeArray<Vector3>(highCenters, Allocator.TempJob);

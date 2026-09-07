@@ -832,59 +832,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 203533396}
   m_CullTransparentMesh: 1
---- !u!1 &206896579
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 206896581}
-  - component: {fileID: 206896580}
-  m_Layer: 0
-  m_Name: EnvironmentManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &206896580
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 206896579}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4c63d89008110024694675c46f00daf8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EnvironmentManager
-  starBiome: {fileID: 11400000, guid: b672b4747e92adb42a848d8892e64ad3, type: 2}
-  gasGiantBiome: {fileID: 11400000, guid: e186e2f134dc236468bcd68185324532, type: 2}
-  iceGiantBiome: {fileID: 11400000, guid: def0ff897ef8d2f4c97ec7473f5eab6d, type: 2}
-  barrenRockBiome: {fileID: 11400000, guid: 7b81fc60192503c44976a803c1c4c07f, type: 2}
-  oceanBiome: {fileID: 11400000, guid: 0364e4e7373850d42b8ea0b6f56cd9a0, type: 2}
-  landBiomes:
-  - {fileID: 11400000, guid: d0a3552eb33b0d140be019f9ae4a9e07, type: 2}
-  - {fileID: 11400000, guid: de91f16fc32ee714c8ea2edca0ec04f1, type: 2}
-  - {fileID: 11400000, guid: 5120c58b20f852d40841924f1378a66c, type: 2}
---- !u!4 &206896581
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 206896579}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &256300533
 GameObject:
   m_ObjectHideFlags: 0
@@ -2126,7 +2073,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -24.999939}
+  m_AnchoredPosition: {x: 0, y: -24.99997}
   m_SizeDelta: {x: 0, y: -50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &505660834
@@ -5923,8 +5870,8 @@ MonoBehaviour:
   overlayMaterial: {fileID: 2100000, guid: 6ec0d1aea9011b146a4200d536ae56c7, type: 2}
   politicalMaterial: {fileID: 2100000, guid: edd362e3310c56a4f8912ab1b619b463, type: 2}
   atmosphereMaterial: {fileID: 2100000, guid: d18ab5d205eb0e14bbf7594354ce52b8, type: 2}
-  lowResAtmosphereMesh: {fileID: 289301614986012343, guid: eaca596677841854088f11fe6e6a7ab6, type: 3}
-  highResAtmosphereMesh: {fileID: 289301614986012343, guid: fb5487acc677576479923d8c8e85e781, type: 3}
+  lowResAtmosphereMesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+  highResAtmosphereMesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!114 &1741213817
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5939,14 +5886,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SystemMeshGenerator
   systemViewMaxSubdivisions: 4
   bakedTemplates:
-  - {fileID: 11400000, guid: 57e02f436eeedb44bb7a2ee3fa733c71, type: 2}
-  - {fileID: 11400000, guid: 41a0bc0a15ba4bf46b383083524772e8, type: 2}
-  - {fileID: 11400000, guid: aa306357efc6e1647b29e1c6d326d15f, type: 2}
-  - {fileID: 11400000, guid: 2981a88027484af429b8b99dac04764e, type: 2}
-  - {fileID: 11400000, guid: 4a038b0ca1885ac409fec21205838fdd, type: 2}
-  - {fileID: 11400000, guid: dd87293e2b7a9754595beaa16e09e03e, type: 2}
-  - {fileID: 11400000, guid: 4419252574fc6404d9a6971908f1603b, type: 2}
-  - {fileID: 11400000, guid: 9a5790221d726bc4e832d9bc142da275, type: 2}
+  - {fileID: 11400000, guid: c336e9d89727bcd4eb32fb14aab1845f, type: 2}
+  - {fileID: 11400000, guid: 46c71d395d70bf24b95ed0c29e360e56, type: 2}
+  - {fileID: 11400000, guid: 9f6c2147dd4440f4098ee5527af6029e, type: 2}
+  - {fileID: 11400000, guid: eb9baba4f5eab874eb6bdadd7b3e338d, type: 2}
+  - {fileID: 11400000, guid: cde51b450f3c976458231e2c2e8a7a08, type: 2}
+  - {fileID: 11400000, guid: 2c7d2598529c6fe47a4f2ef7e36bfe97, type: 2}
+  - {fileID: 11400000, guid: b9d482a9d0d3c8b4aa4236e4421d2630, type: 2}
+  - {fileID: 11400000, guid: fc7d7bfe53024954eae76df7e943659c, type: 2}
 --- !u!114 &1741213818
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6650,7 +6597,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -24.999939}
+  m_AnchoredPosition: {x: 0, y: -24.99997}
   m_SizeDelta: {x: 0, y: -50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2104299512
@@ -6878,7 +6825,6 @@ SceneRoots:
   - {fileID: 106580545}
   - {fileID: 832575519}
   - {fileID: 1592591191}
-  - {fileID: 206896581}
   - {fileID: 70031923}
   - {fileID: 192364982}
   - {fileID: 1741213815}
