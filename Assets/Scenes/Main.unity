@@ -5870,8 +5870,8 @@ MonoBehaviour:
   overlayMaterial: {fileID: 2100000, guid: 6ec0d1aea9011b146a4200d536ae56c7, type: 2}
   politicalMaterial: {fileID: 2100000, guid: edd362e3310c56a4f8912ab1b619b463, type: 2}
   atmosphereMaterial: {fileID: 2100000, guid: d18ab5d205eb0e14bbf7594354ce52b8, type: 2}
-  lowResAtmosphereMesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
-  highResAtmosphereMesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+  lowResAtmosphereMesh: {fileID: 4300000, guid: 8feb847cc3d6f6641a1917261d6f02b2, type: 2}
+  highResAtmosphereMesh: {fileID: 4300000, guid: db1c7303f78a31f4baa3f521ae40362b, type: 2}
 --- !u!114 &1741213817
 MonoBehaviour:
   m_ObjectHideFlags: 0
