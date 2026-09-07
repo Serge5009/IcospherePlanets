@@ -14,6 +14,18 @@ public class UIOceanTab : UITabPanel
     public Button addWaterBtn;
     public Button removeWaterBtn;
 
+    [Header("Hypsometric Graph")]
+    public RawImage graphImage;
+    public int graphWidth = 512;
+    public int graphHeight = 256;
+    public float shallowDepthMeters = 500f;
+
+    [Header("Graph Colors")]
+    public Color graphBackgroundColor = new Color(0.1f, 0.1f, 0.1f, 1f);
+    public Color landColor = new Color(0.4f, 0.3f, 0.2f, 1f);
+    public Color curveLineColor = Color.white;
+
+    private Texture2D graphTexture;
     private bool isUpdatingSlider = false;
 
     private void Start()
@@ -26,6 +38,17 @@ public class UIOceanTab : UITabPanel
 
         if (removeWaterBtn != null)
             removeWaterBtn.onClick.AddListener(() => ChangeVolume(-10000000));
+
+        InitializeGraphTexture();
+    }
+
+    private void InitializeGraphTexture()
+    {
+        if (graphImage == null) return;
+
+        graphTexture = new Texture2D(graphWidth, graphHeight, TextureFormat.RGBA32, false);
+        graphTexture.filterMode = FilterMode.Bilinear;
+        graphImage.texture = graphTexture;
     }
 
     protected override void Refresh()
@@ -45,13 +68,17 @@ public class UIOceanTab : UITabPanel
         {
             waterLevelSlider.interactable = true;
             isUpdatingSlider = true;
+
+            float maxAlt = currentBody.hypsometricCurveSqKm.Length - 1;
             waterLevelSlider.minValue = 0;
-            waterLevelSlider.maxValue = currentBody.hypsometricCurveSqKm.Length - 1;
+            waterLevelSlider.maxValue = maxAlt * 1.1f;
             waterLevelSlider.value = currentBody.waterLevel > 0 ? currentBody.waterLevel : 0;
+
             isUpdatingSlider = false;
         }
 
         UpdateStatsText();
+        DrawHypsometricGraph();
     }
 
     private void OnSliderChanged(float value)
@@ -69,6 +96,7 @@ public class UIOceanTab : UITabPanel
 
         UpdateStatsText();
         UpdatePlanetVisuals();
+        DrawHypsometricGraph();
     }
 
     private void ChangeVolume(double amountKm3)
@@ -95,6 +123,7 @@ public class UIOceanTab : UITabPanel
 
         UpdateStatsText();
         UpdatePlanetVisuals();
+        DrawHypsometricGraph();
     }
 
     private void UpdateStatsText()
@@ -139,5 +168,75 @@ public class UIOceanTab : UITabPanel
             Planet p = currentBody.visualObject.GetComponent<Planet>();
             if (p != null) p.FastUpdateWaterVisuals();
         }
+    }
+
+
+    private void DrawHypsometricGraph()
+    {
+        if (graphTexture == null || currentBody == null || currentBody.hypsometricCurveSqKm == null) return;
+
+        Color[] pixels = new Color[graphWidth * graphHeight];
+
+        for (int i = 0; i < pixels.Length; i++) pixels[i] = graphBackgroundColor;
+
+        int maxAlt = currentBody.hypsometricCurveSqKm.Length - 1;
+        float graphMaxAlt = maxAlt * 1.1f;
+        double totalArea = currentBody.totalSurfaceAreaSqKm;
+
+        Color shallowCol = currentBody.oceanLiquid != null ? currentBody.oceanLiquid.shallowColor : new Color(0.2f, 0.6f, 1f);
+        Color deepCol = currentBody.oceanLiquid != null ? currentBody.oceanLiquid.deepColor : new Color(0f, 0.1f, 0.4f);
+
+        int[] curveYPositions = new int[graphWidth];
+        for (int x = 0; x < graphWidth; x++)
+        {
+            double targetArea = ((double)x / (graphWidth - 1)) * totalArea;
+
+            int altAtX = 0;
+            for (int i = 0; i <= maxAlt; i++)
+            {
+                if (currentBody.hypsometricCurveSqKm[i] >= targetArea)
+                {
+                    altAtX = i;
+                    break;
+                }
+                if (i == maxAlt) altAtX = maxAlt;
+            }
+
+            curveYPositions[x] = Mathf.FloorToInt(((float)altAtX / graphMaxAlt) * graphHeight);
+        }
+
+        int waterLevelY = Mathf.FloorToInt((currentBody.waterLevel / graphMaxAlt) * graphHeight);
+
+        for (int x = 0; x < graphWidth; x++)
+        {
+            int curveY = curveYPositions[x];
+
+            for (int y = 0; y < graphHeight; y++)
+            {
+                int pixelIndex = y * graphWidth + x;
+
+                if (y < curveY)
+                {
+                    pixels[pixelIndex] = landColor;
+                }
+                else if (y == curveY)
+                {
+                    pixels[pixelIndex] = curveLineColor;
+                }
+                else if (y <= waterLevelY)
+                {
+                    float currentAltMeters = ((float)y / graphHeight) * graphMaxAlt;
+                    float depthMeters = currentBody.waterLevel - currentAltMeters;
+
+                    float depthT = Mathf.Clamp01(depthMeters / shallowDepthMeters);
+                    Color waterCol = Color.Lerp(shallowCol, deepCol, depthT);
+
+                    pixels[pixelIndex] = Color.Lerp(graphBackgroundColor, waterCol, 0.8f);
+                }
+            }
+        }
+
+        graphTexture.SetPixels(pixels);
+        graphTexture.Apply();
     }
 }
