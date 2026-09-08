@@ -30,8 +30,10 @@ public class UIInfoTab : UITabPanel
         sb.AppendLine("<color=#55AAFF><b>--- PHYSICS & ORBIT ---</b></color>");
         sb.AppendLine($"<b>Archetype:</b> {currentBody.archetype}");
         sb.AppendLine($"<b>Mass:</b> {currentBody.massEarths:F3} Earths");
+
         string radiusLabel = currentBody.variantIndex > 0 ? "Mean Radius" : "Radius";
         sb.AppendLine($"<b>{radiusLabel}:</b> {currentBody.radiusKm:F0} km");
+
         sb.AppendLine($"<b>Gravity:</b> {currentBody.surfaceGravity:F2} m/s²");
         sb.AppendLine($"<b>Distance:</b> {(currentBody.orbit.semiMajorAxis / AstroMath.AU_TO_KM):F2} AU");
         sb.AppendLine($"<b>Axial Tilt:</b> {currentBody.axialTilt:F1}°");
@@ -99,6 +101,13 @@ public class UIInfoTab : UITabPanel
             {
                 sb.AppendLine("<b>Sea Level:</b> <color=#AAAAAA>0m (No Liquid Accreted)</color>");
             }
+
+            sb.AppendLine("\n<color=#DDDD88><b>--- GLOBAL SURFACE COVER ---</b></color>");
+            sb.AppendLine($"<b>Liquid Ocean:</b> {(currentBody.globalOceanCoverage * 100f):F1}%");
+            sb.AppendLine($"<b>Frozen Ocean:</b> {(currentBody.globalIceCoverage * 100f):F1}%");
+            sb.AppendLine($"<b>Snow on Land:</b> {(currentBody.globalSnowCoverage * 100f):F1}%");
+            sb.AppendLine($"<b>Forest/Biomass:</b> {(currentBody.globalBiomassCoverage * 100f):F1}%");
+            sb.AppendLine($"<b>Barren/Desert:</b> {(currentBody.globalDesertCoverage * 100f):F1}%");
 
             sb.AppendLine("\n<color=#DDDDDD><b>--- ATMOSPHERE ---</b></color>");
             if (currentBody.surfacePressureAtm > 0.001)

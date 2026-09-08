@@ -86,6 +86,12 @@ public class CelestialBody
     public float globalMinTemperature;
     public float globalMaxTemperature;
 
+    public float globalOceanCoverage;
+    public float globalIceCoverage;
+    public float globalSnowCoverage;
+    public float globalBiomassCoverage;
+    public float globalDesertCoverage;
+
     public Color atmosphereSkyColor;
     public Color atmosphereCloudColor;
     public float atmosphereVisualScale;

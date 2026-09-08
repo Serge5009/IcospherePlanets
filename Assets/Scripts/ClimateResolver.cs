@@ -54,7 +54,7 @@ public struct CalculateMoistureJob : IJobParallelFor
 
         if (waterLevel > -5000f && topo.altitude < waterLevel)
         {
-            rainFactors[i] = 1.0f;
+            rainFactors[i] = 1.5f;
             return;
         }
 
@@ -109,6 +109,8 @@ public struct CalculateMoistureJob : IJobParallelFor
         float maxAltCrossed = topo.altitude;
         int steps = 0;
         int maxSteps = 60;
+
+        int waterCellsHit = 0;
         bool hitOcean = false;
 
         float currentProgress = Vector3.Dot(pos, rayDir);
@@ -125,7 +127,6 @@ public struct CalculateMoistureJob : IJobParallelFor
             for (int n = 0; n < count; n++)
             {
                 int neighborIdx = neighbors[offset + n];
-
                 if (neighborIdx == previousCell) continue;
 
                 Vector3 neighborPos = topologies[neighborIdx].localPosition.normalized;
@@ -155,6 +156,11 @@ public struct CalculateMoistureJob : IJobParallelFor
             if (waterLevel > -5000f && cellAlt < waterLevel)
             {
                 hitOcean = true;
+                waterCellsHit++;
+                if (waterCellsHit >= 5) break;
+            }
+            else if (hitOcean)
+            {
                 break;
             }
 
@@ -167,9 +173,11 @@ public struct CalculateMoistureJob : IJobParallelFor
         }
         else
         {
-            float baseMoisture = 1.0f - ((float)steps / maxSteps);
+            float sourceCharge = 0.5f + (0.5f * Mathf.Sqrt(waterCellsHit / 5.0f));
+            float baseMoisture = 1.5f - ((float)steps / maxSteps);
             float mountainPenalty = Mathf.Max(0, maxAltCrossed - topo.altitude) / 2000f;
-            rainFactors[i] = Mathf.Clamp01(baseMoisture - mountainPenalty);
+
+            rainFactors[i] = Mathf.Max(0f, (baseMoisture - mountainPenalty) * sourceCharge);
         }
     }
 }
@@ -261,14 +269,29 @@ public struct ClimateEquilibriumJob : IJobParallelFor
             clim.liquidDepth = 0f;
         }
 
-        if (clim.liquidDepth > 0) clim.moisture = 1.0f;
-        else clim.moisture = rainFactors[i] * state.globalRainStrength;
+        float dryingFactor = 0f;
+        if (localTemp > state.freezingPoint)
+        {
+            float heatRange = state.boilingPoint - state.freezingPoint;
+            float heatRatio = Mathf.Clamp01((localTemp - state.freezingPoint) / heatRange);
+            dryingFactor = heatRatio * 0.5f;
+        }
+
+        if (clim.liquidDepth > 0)
+        {
+            clim.moisture = 1.0f;
+        }
+        else
+        {
+            float rawMoisture = rainFactors[i] * state.globalRainStrength;
+            clim.moisture = Mathf.Clamp01(rawMoisture - dryingFactor);
+        }
 
         if (localTemp < state.freezingPoint && state.waterLevel > -5000f && state.atmosphericPressure >= 0.05f)
         {
             float degreesBelow = state.freezingPoint - localTemp;
             float baselineFrost = degreesBelow * 0.02f;
-            clim.snowDepth = Mathf.Max(baselineFrost, clim.moisture * degreesBelow * 0.1f);
+            clim.snowDepth = Mathf.Max(baselineFrost, state.globalRainStrength * degreesBelow * 0.1f);
 
             if (clim.liquidDepth > 0)
             {
@@ -455,14 +478,37 @@ public class ClimateResolver : MonoBehaviour
             {
                 float minT = float.MaxValue;
                 float maxT = float.MinValue;
+
+                int oceanCount = 0;
+                int iceCount = 0;
+                int snowCount = 0;
+                int bioCount = 0;
+                int barrenCount = 0;
+
                 for (int i = 0; i < simData.climates.Length; i++)
                 {
-                    float t = simData.climates[i].localTemperature;
+                    CellClimate clim = simData.climates[i];
+
+                    float t = clim.localTemperature;
                     if (t < minT) minT = t;
                     if (t > maxT) maxT = t;
+
+                    if (clim.liquidDepth > 0 && clim.iceCover > 0) iceCount++;
+                    else if (clim.liquidDepth > 0) oceanCount++;
+                    else if (clim.iceCover > 0) snowCount++;
+                    else if (clim.biomass > 0) bioCount++;
+                    else barrenCount++;
                 }
+
                 simData.body.globalMinTemperature = minT;
                 simData.body.globalMaxTemperature = maxT;
+
+                float totalCells = simData.climates.Length;
+                simData.body.globalOceanCoverage = oceanCount / totalCells;
+                simData.body.globalIceCoverage = iceCount / totalCells;
+                simData.body.globalSnowCoverage = snowCount / totalCells;
+                simData.body.globalBiomassCoverage = bioCount / totalCells;
+                simData.body.globalDesertCoverage = barrenCount / totalCells;
             }
         }
         finally
@@ -507,17 +553,11 @@ public class ClimateResolver : MonoBehaviour
                     };
                     JobHandle mHandle = mJob.Schedule(simData.topologies.Length, 64);
 
-                    BlurMoistureJob bJob = new BlurMoistureJob
-                    {
-                        inputRainFactors = simData.rainFactors,
-                        neighborOffsets = simData.neighborOffsets,
-                        neighborCounts = simData.neighborCounts,
-                        neighbors = simData.neighbors,
-                        outputRainFactors = simData.blurredRainFactors
-                    };
-                    JobHandle bHandle = bJob.Schedule(simData.topologies.Length, 64, mHandle);
+                    JobHandle bHandle1 = new BlurMoistureJob { inputRainFactors = simData.rainFactors, neighborOffsets = simData.neighborOffsets, neighborCounts = simData.neighborCounts, neighbors = simData.neighbors, outputRainFactors = simData.blurredRainFactors }.Schedule(simData.topologies.Length, 64, mHandle);
+                    JobHandle bHandle2 = new BlurMoistureJob { inputRainFactors = simData.blurredRainFactors, neighborOffsets = simData.neighborOffsets, neighborCounts = simData.neighborCounts, neighbors = simData.neighbors, outputRainFactors = simData.rainFactors }.Schedule(simData.topologies.Length, 64, bHandle1);
+                    JobHandle bHandle3 = new BlurMoistureJob { inputRainFactors = simData.rainFactors, neighborOffsets = simData.neighborOffsets, neighborCounts = simData.neighborCounts, neighbors = simData.neighbors, outputRainFactors = simData.blurredRainFactors }.Schedule(simData.topologies.Length, 64, bHandle2);
 
-                    moistureHandles.Add(bHandle);
+                    moistureHandles.Add(bHandle3);
 
                     simData.body.lastCalculatedWaterLevel = simData.body.waterLevel;
                 }
@@ -546,11 +586,13 @@ public class ClimateResolver : MonoBehaviour
 
                 float totalAlbedo = 0f;
                 float oceanArea = 0f;
+                float frozenOceanArea = 0f;
 
                 for (int c = 0; c < simData.climates.Length; c++)
                 {
                     CellClimate clim = simData.climates[c];
-                    if (clim.iceCover > 0) totalAlbedo += 0.6f;
+                    if (clim.iceCover > 0 && clim.liquidDepth > 0) { totalAlbedo += 0.6f; frozenOceanArea += 1f; }
+                    else if (clim.iceCover > 0) { totalAlbedo += 0.6f; }
                     else if (clim.liquidDepth > 0) { totalAlbedo += 0.1f; oceanArea += 1f; }
                     else if (clim.biomass > 0) totalAlbedo += 0.15f;
                     else totalAlbedo += 0.25f;
@@ -560,7 +602,8 @@ public class ClimateResolver : MonoBehaviour
                 float atmosThickness = Mathf.Clamp01((float)body.surfacePressureAtm / 2.0f);
                 float globalAlbedo = Mathf.Lerp(surfaceAlbedo, 0.3f, atmosThickness);
 
-                float oceanFraction = oceanArea / simData.climates.Length;
+                float effectiveOceanFraction = (oceanArea + (frozenOceanArea * 0.15f)) / simData.climates.Length;
+                float oceanCurve = Mathf.Sqrt(Mathf.Clamp01(effectiveOceanFraction * 2.0f));
 
                 double distanceAU = body.orbit.semiMajorAxis / AstroMath.AU_TO_KM;
                 float blackbody = AstroMath.CalculateBlackbodyTemperature(starLuminosity, distanceAU, globalAlbedo);
@@ -582,7 +625,8 @@ public class ClimateResolver : MonoBehaviour
                 float dynamicLapseRate = (float)(body.surfaceGravity / 9.8) * 6.5f;
                 float tempFactor = Mathf.Clamp01(blackbody / 288f);
                 float pressureFactor = Mathf.Clamp01((float)body.surfacePressureAtm / 0.05f);
-                float rainStrength = oceanFraction * tempFactor * pressureFactor;
+
+                float rainStrength = oceanCurve * tempFactor * pressureFactor;
 
                 float globalSoil = body.soilBaseThickness * (1.0f + (float)body.surfacePressureAtm) * (float)(body.surfaceGravity / 9.8) * (1.0f + rainStrength);
                 globalSoil = Mathf.Clamp(globalSoil, 0.1f, 3.0f);
