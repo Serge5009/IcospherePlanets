@@ -16,9 +16,9 @@ MonoBehaviour:
   modeType: 0
   dataTarget: 2
   scaleType: 1
-  absoluteMin: 0
-  absoluteMax: 1
-  minColor: {r: 0, g: 0, b: 0, a: 1}
+  absoluteMin: 0.5
+  absoluteMax: 0.8
+  minColor: {r: 0.09433961, g: 0.09433961, b: 0.09433961, a: 1}
   maxColor: {r: 1, g: 0.88009125, b: 0.16509432, a: 1}
   useAnchors: 0
   anchor1Value: 0

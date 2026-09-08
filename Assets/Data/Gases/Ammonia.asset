@@ -10,13 +10,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b9f1d55ce096f1e4684e6b0c3769fe06, type: 3}
-  m_Name: Toxic
+  m_Name: Ammonia
   m_EditorClassIdentifier: Assembly-CSharp::GasTemplate
   gasId: 6
-  gasName: Toxic Gases
+  gasName: Ammonia
   greenhouseMultiplier: 0.2
   toxicity: 1
   molarMass: 60
   formsClouds: 0
+  isCarbonCycleGas: 0
   skyColor: {r: 0.7075472, g: 0.50990355, b: 0.18356179, a: 1}
   cloudColor: {r: 1, g: 1, b: 1, a: 0.8}

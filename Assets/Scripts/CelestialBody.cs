@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 public enum BodyType { Star, RockyPlanet, GasGiant, IceGiant, DwarfPlanet, Moon, Asteroid, Comet }
 
@@ -79,6 +80,8 @@ public class CelestialBody
     public float magnetosphereStrength;
 
     public Dictionary<byte, double> atmosphericGasesKg = new Dictionary<byte, double>();
+    public Dictionary<byte, double> frozenVolatilesKg = new Dictionary<byte, double>();
+
     public double surfacePressureAtm;
     public float greenhouseHeatContribution;
     public float toxicityLevel;
@@ -121,6 +124,11 @@ public class CelestialBody
         this.surfaceGravity = (G_SI * massKg) / (radiusMeters * radiusMeters);
 
         this.totalSurfaceAreaSqKm = 4.0 * System.Math.PI * (radiusKm * radiusKm);
+    }
+
+    public double GetTotalAtmosphereMassKg()
+    {
+        return atmosphericGasesKg.Values.Sum();
     }
 
     public double GetCellAreaSqKm(int cellId)
