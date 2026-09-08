@@ -10,18 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 12148f8385dd0d446b1120857da8ab28, type: 3}
-  m_Name: Temperature
+  m_Name: RainFactor
   m_EditorClassIdentifier: Assembly-CSharp::MapModeTemplate
-  modeName: Temperature
+  modeName: Rain Factor
   modeType: 0
-  dataTarget: 1
-  scaleType: 2
-  absoluteMin: 200
-  absoluteMax: 500
-  minColor: {r: 0, g: 0.05725074, b: 1, a: 1}
-  maxColor: {r: 0.7735849, g: 0, b: 0, a: 1}
-  useAnchors: 1
-  anchor1Value: 273
-  anchor1Color: {r: 1, g: 1, b: 1, a: 1}
-  anchor2Value: 300
-  anchor2Color: {r: 0.03702387, g: 0.6037736, b: 0.05767999, a: 1}
+  dataTarget: 5
+  scaleType: 1
+  absoluteMin: 0
+  absoluteMax: 1
+  minColor: {r: 0.4433962, g: 0.4433962, b: 0.4433962, a: 1}
+  maxColor: {r: 0.38714847, g: 0.5659424, b: 0.9433962, a: 1}
+  useAnchors: 0
+  anchor1Value: 0
+  anchor1Color: {r: 0, g: 0, b: 0, a: 0}
+  anchor2Value: 0
+  anchor2Color: {r: 0, g: 0, b: 0, a: 0}

@@ -16,6 +16,18 @@ public enum GradientScale
     Anchored 
 }
 
+public enum GradientDataTarget
+{
+    Altitude,
+    Temperature,
+    Insolation,
+    SoilThickness,
+    Moisture,
+    RainFactor,
+    Biomass,
+    CellArea
+}
+
 [CreateAssetMenu(fileName = "New Map Mode", menuName = "Strategy/Templates/Map Mode")]
 public class MapModeTemplate : ScriptableObject
 {
@@ -23,6 +35,7 @@ public class MapModeTemplate : ScriptableObject
     public MapModeType modeType;
 
     [Header("Gradient Settings (If Applicable)")]
+    public GradientDataTarget dataTarget;
     public GradientScale scaleType;
 
     [Tooltip("Used if ScaleType is Absolute. Ignored if Relative.")]
@@ -34,7 +47,6 @@ public class MapModeTemplate : ScriptableObject
     public Color maxColor = Color.white;
 
     [Header("Anchored Gradient Settings")]
-    [Tooltip("If true, the gradient will pass through these specific colors at these specific values.")]
     public bool useAnchors;
 
     public float anchor1Value;

@@ -334,10 +334,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MapModeManager
   availableModes:
-  - {fileID: 11400000, guid: 68668c64e37f5a941929546b30d1ee0a, type: 2}
-  - {fileID: 11400000, guid: 7ba349a0e9ddb8f4d9c96e8713b22b99, type: 2}
   - {fileID: 11400000, guid: 6d46e89bad51d844e92b43bd8dc827e6, type: 2}
   - {fileID: 11400000, guid: 77c0d62429ee0cf43a391a6f6c899036, type: 2}
+  - {fileID: 11400000, guid: 0e2e81f2a0586ce41aaed74cb593f38a, type: 2}
+  - {fileID: 11400000, guid: 18c697e5b25d8a04683eba7a7d54adcd, type: 2}
+  - {fileID: 11400000, guid: 9c3155f1fa3299e4782ef65e35f7d5b4, type: 2}
+  - {fileID: 11400000, guid: 7f797cde30290f342bea797141a29860, type: 2}
+  - {fileID: 11400000, guid: 675ef730586995643925a675c5b6d5c3, type: 2}
+  - {fileID: 11400000, guid: c27ba974b431f3a42811815ae2fc6f14, type: 2}
+  - {fileID: 11400000, guid: 7ba349a0e9ddb8f4d9c96e8713b22b99, type: 2}
+  - {fileID: 11400000, guid: 68668c64e37f5a941929546b30d1ee0a, type: 2}
   politicalMode: {fileID: 11400000, guid: 68668c64e37f5a941929546b30d1ee0a, type: 2}
 --- !u!4 &83960476
 Transform:
