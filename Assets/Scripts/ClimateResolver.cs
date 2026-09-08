@@ -493,11 +493,17 @@ public class ClimateResolver : MonoBehaviour
                     if (t < minT) minT = t;
                     if (t > maxT) maxT = t;
 
-                    if (clim.liquidDepth > 0 && clim.iceCover > 0) iceCount++;
-                    else if (clim.liquidDepth > 0) oceanCount++;
-                    else if (clim.iceCover > 0) snowCount++;
-                    else if (clim.biomass > 0) bioCount++;
-                    else barrenCount++;
+                    if (simData.body.waterLevel > -5000f && simData.topologies[i].altitude < simData.body.waterLevel)
+                    {
+                        if (clim.iceCover > 0.5f) iceCount++;
+                        else oceanCount++;
+                    }
+                    else
+                    {
+                        if (clim.iceCover > 0.5f) snowCount++;
+                        else if (clim.biomass > 0.5f) bioCount++;
+                        else barrenCount++;
+                    }
                 }
 
                 simData.body.globalMinTemperature = minT;
@@ -591,11 +597,18 @@ public class ClimateResolver : MonoBehaviour
                 for (int c = 0; c < simData.climates.Length; c++)
                 {
                     CellClimate clim = simData.climates[c];
-                    if (clim.iceCover > 0 && clim.liquidDepth > 0) { totalAlbedo += 0.6f; frozenOceanArea += 1f; }
-                    else if (clim.iceCover > 0) { totalAlbedo += 0.6f; }
-                    else if (clim.liquidDepth > 0) { totalAlbedo += 0.1f; oceanArea += 1f; }
-                    else if (clim.biomass > 0) totalAlbedo += 0.15f;
-                    else totalAlbedo += 0.25f;
+
+                    if (body.waterLevel > -5000f && simData.topologies[c].altitude < body.waterLevel)
+                    {
+                        if (clim.iceCover > 0.5f) { totalAlbedo += 0.6f; frozenOceanArea += 1f; }
+                        else { totalAlbedo += 0.1f; oceanArea += 1f; }
+                    }
+                    else
+                    {
+                        if (clim.iceCover > 0.5f) totalAlbedo += 0.6f;
+                        else if (clim.biomass > 0.5f) totalAlbedo += 0.15f;
+                        else totalAlbedo += 0.25f;
+                    }
                 }
                 float surfaceAlbedo = totalAlbedo / simData.climates.Length;
 
