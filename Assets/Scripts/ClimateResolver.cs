@@ -29,6 +29,9 @@ public struct PlanetClimateState
     public Vector4 dominantBedrockColor;
     public Vector4 secondaryBedrockColor;
     public Vector3 iceColor;
+
+    public float eqInsolation;
+    public float poleInsolation;
 }
 
 [BurstCompile]
@@ -225,7 +228,11 @@ public struct ClimateEquilibriumJob : IJobParallelFor
         }
         else
         {
-            localTemp = baseTemp * (0.8f + 0.4f * topo.baseInsolation);
+            Vector3 normPos = topo.localPosition.normalized;
+            float cosLat = Mathf.Sqrt(Mathf.Clamp01(1f - normPos.y * normPos.y));
+            float insolation = Mathf.Lerp(state.poleInsolation, state.eqInsolation, cosLat);
+
+            localTemp = baseTemp * (0.8f + 0.4f * insolation);
         }
 
         float elevation = topo.altitude;
@@ -582,6 +589,21 @@ public class ClimateResolver : MonoBehaviour
 
                 Color iceCol = body.oceanLiquid != null ? body.oceanLiquid.iceColor : Color.white;
 
+                float absTilt = Mathf.Abs((float)body.axialTilt);
+                float eqInsolation, poleInsolation;
+                if (absTilt <= 54f)
+                {
+                    float t = absTilt / 54f;
+                    eqInsolation = 1.0f - (t * 0.5f);
+                    poleInsolation = t * 0.5f;
+                }
+                else
+                {
+                    float t = (absTilt - 54f) / 36f;
+                    eqInsolation = 0.5f - (t * 0.5f);
+                    poleInsolation = 0.5f + (t * 0.5f);
+                }
+
                 PlanetClimateState state = new PlanetClimateState
                 {
                     blackbodyTemp = blackbody,
@@ -604,7 +626,10 @@ public class ClimateResolver : MonoBehaviour
                     secondaryBedrockId = body.secondaryBedrockId,
                     dominantBedrockColor = body.dominantBedrockColor,
                     secondaryBedrockColor = body.secondaryBedrockColor,
-                    iceColor = new Vector3(iceCol.r, iceCol.g, iceCol.b)
+                    iceColor = new Vector3(iceCol.r, iceCol.g, iceCol.b),
+
+                    eqInsolation = eqInsolation,
+                    poleInsolation = poleInsolation
                 };
 
                 ClimateEquilibriumJob job = new ClimateEquilibriumJob

@@ -136,6 +136,22 @@ public class ActiveTerrestrialGenerator : IPlanetGenerator
 
         float shiftedWaterLevel = hasOceans ? (waterLevel - minAltitude) : 0f;
 
+        float absTilt = Mathf.Abs((float)body.axialTilt);
+        float eqInsolation, poleInsolation;
+
+        if (absTilt <= 54f)
+        {
+            float t = absTilt / 54f;
+            eqInsolation = 1.0f - (t * 0.5f);
+            poleInsolation = t * 0.5f;
+        }
+        else
+        {
+            float t = (absTilt - 54f) / 36f;
+            eqInsolation = 0.5f - (t * 0.5f);
+            poleInsolation = 0.5f + (t * 0.5f);
+        }
+
         for (int i = 0; i < cellCount; i++)
         {
             Vector3 localPos = cellCenters[i];
@@ -163,9 +179,8 @@ public class ActiveTerrestrialGenerator : IPlanetGenerator
 
             Vector3 normPos = localPos.normalized;
             float cosLat = Mathf.Sqrt(Mathf.Clamp01(1f - normPos.y * normPos.y));
-            float sinLat = Mathf.Abs(normPos.y);
-            float tiltRatio = Mathf.Clamp01((float)body.axialTilt / 90f);
-            float insolation = Mathf.Lerp(cosLat, sinLat, tiltRatio);
+
+            float insolation = Mathf.Lerp(poleInsolation, eqInsolation, cosLat);
 
             float baseRain = 0f;
             if (hasOceans)
