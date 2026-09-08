@@ -1,9 +1,10 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using TMPro;
 using System.Text;
 
-public class UIOceanTab : UITabPanel
+public class UIOceanTab : UITabPanel, IPointerUpHandler
 {
     [Header("UI Elements")]
     public TextMeshProUGUI titleText;
@@ -31,7 +32,17 @@ public class UIOceanTab : UITabPanel
     private void Start()
     {
         if (waterLevelSlider != null)
+        {
             waterLevelSlider.onValueChanged.AddListener(OnSliderChanged);
+
+            EventTrigger trigger = waterLevelSlider.gameObject.GetComponent<EventTrigger>();
+            if (trigger == null) trigger = waterLevelSlider.gameObject.AddComponent<EventTrigger>();
+
+            EventTrigger.Entry entry = new EventTrigger.Entry();
+            entry.eventID = EventTriggerType.PointerUp;
+            entry.callback.AddListener((data) => { OnPointerUp((PointerEventData)data); });
+            trigger.triggers.Add(entry);
+        }
 
         if (addWaterBtn != null)
             addWaterBtn.onClick.AddListener(() => ChangeVolume(10000000));
@@ -95,8 +106,22 @@ public class UIOceanTab : UITabPanel
         }
 
         UpdateStatsText();
-        UpdatePlanetVisuals();
         DrawHypsometricGraph();
+
+        if (currentBody.visualObject != null)
+        {
+            Planet p = currentBody.visualObject.GetComponent<Planet>();
+            if (p != null) p.FastUpdateWaterVisuals();
+        }
+    }
+
+    public void OnPointerUp(PointerEventData eventData)
+    {
+        if (currentBody == null) return;
+
+        Debug.Log("Slider Released: Recalculating Climate Equilibrium...");
+
+        _ = ClimateResolver.Instance.ResolveEquilibriumAsync(new System.Collections.Generic.List<CelestialBody> { currentBody }, 1);
     }
 
     private void ChangeVolume(double amountKm3)
@@ -122,8 +147,9 @@ public class UIOceanTab : UITabPanel
         }
 
         UpdateStatsText();
-        UpdatePlanetVisuals();
         DrawHypsometricGraph();
+
+        _ = ClimateResolver.Instance.ResolveEquilibriumAsync(new System.Collections.Generic.List<CelestialBody> { currentBody }, 1);
     }
 
     private void UpdateStatsText()
@@ -160,16 +186,6 @@ public class UIOceanTab : UITabPanel
 
         statsText.text = sb.ToString();
     }
-
-    private void UpdatePlanetVisuals()
-    {
-        if (currentBody.visualObject != null)
-        {
-            Planet p = currentBody.visualObject.GetComponent<Planet>();
-            if (p != null) p.FastUpdateWaterVisuals();
-        }
-    }
-
 
     private void DrawHypsometricGraph()
     {

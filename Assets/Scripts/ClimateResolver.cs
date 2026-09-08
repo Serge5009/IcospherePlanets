@@ -60,10 +60,15 @@ public struct ClimateEquilibriumJob : IJobParallelFor
             localTemp = baseTemp * (0.8f + 0.4f * topo.baseInsolation);
         }
 
-        float altitudeAboveSeaLevel = Mathf.Max(0f, topo.altitude - state.waterLevel);
-        if (altitudeAboveSeaLevel > 0)
+        float elevation = topo.altitude;
+        if (state.waterLevel > -5000f)
         {
-            localTemp -= (altitudeAboveSeaLevel / 1000f) * state.lapseRate;
+            elevation = Mathf.Max(0f, topo.altitude - state.waterLevel);
+        }
+
+        if (elevation > 0)
+        {
+            localTemp -= (elevation / 1000f) * state.lapseRate;
         }
 
         float blendFactor = Mathf.Clamp01(state.atmosphericPressure / 5.0f);
