@@ -53,6 +53,8 @@ public class CelestialBody
     public double oceanVolumeKm3;
     public float waterLevel;
 
+    public float lastCalculatedWaterLevel = -9999f;
+
     public bool isHighResReady = false;
 
     public BedrockTemplate dominantBedrock;
@@ -150,6 +152,16 @@ public class CelestialBody
         {
             hypsometricCurveSqKm[i] += hypsometricCurveSqKm[i - 1];
         }
+    }
+
+    public bool HasCoastlineChanged(float newWaterLevel)
+    {
+        if (hypsometricCurveSqKm == null || hypsometricCurveSqKm.Length == 0) return false;
+
+        int oldIdx = Mathf.Clamp(Mathf.FloorToInt(Mathf.Max(0, lastCalculatedWaterLevel)), 0, hypsometricCurveSqKm.Length - 1);
+        int newIdx = Mathf.Clamp(Mathf.FloorToInt(Mathf.Max(0, newWaterLevel)), 0, hypsometricCurveSqKm.Length - 1);
+
+        return hypsometricCurveSqKm[oldIdx] != hypsometricCurveSqKm[newIdx];
     }
 
     public void AddOrbitingBody(CelestialBody body, OrbitalParameters parameters)

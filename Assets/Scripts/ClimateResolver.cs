@@ -32,9 +32,177 @@ public struct PlanetClimateState
 }
 
 [BurstCompile]
+public struct CalculateMoistureJob : IJobParallelFor
+{
+    [ReadOnly] public NativeArray<CellTopology> topologies;
+    [ReadOnly] public NativeArray<int> neighborOffsets;
+    [ReadOnly] public NativeArray<byte> neighborCounts;
+    [ReadOnly] public NativeArray<int> neighbors;
+
+    public NativeArray<float> rainFactors;
+
+    public float waterLevel;
+    public bool isTidallyLocked;
+    public Vector3 sunDirection;
+
+    public void Execute(int i)
+    {
+        CellTopology topo = topologies[i];
+
+        if (waterLevel > -5000f && topo.altitude < waterLevel)
+        {
+            rainFactors[i] = 1.0f;
+            return;
+        }
+
+        Vector3 pos = topo.localPosition.normalized;
+        Vector3 windDir;
+
+        if (isTidallyLocked)
+        {
+            windDir = Vector3.ProjectOnPlane(sunDirection, pos).normalized;
+        }
+        else
+        {
+            float lat = Mathf.Asin(pos.y);
+            float lon = Mathf.Atan2(pos.z, pos.x);
+
+            Vector3 east = new Vector3(-Mathf.Sin(lon), 0, Mathf.Cos(lon)).normalized;
+            Vector3 north = new Vector3(
+                -Mathf.Sin(lat) * Mathf.Cos(lon),
+                Mathf.Cos(lat),
+                -Mathf.Sin(lat) * Mathf.Sin(lon)
+            ).normalized;
+
+            float latDeg = lat * Mathf.Rad2Deg;
+            float absLat = Mathf.Abs(latDeg);
+
+            if (absLat < 30f)
+            {
+                float equatorDir = latDeg > 0 ? -0.5f : 0.5f;
+                windDir = (-east + north * equatorDir).normalized;
+            }
+            else if (absLat < 60f)
+            {
+                float poleDir = latDeg > 0 ? 0.5f : -0.5f;
+                windDir = (east + north * poleDir).normalized;
+            }
+            else
+            {
+                float equatorDir = latDeg > 0 ? -0.5f : 0.5f;
+                windDir = (-east + north * equatorDir).normalized;
+            }
+        }
+
+        float jitterX = (i % 13) / 13f - 0.5f;
+        float jitterY = (i % 17) / 17f - 0.5f;
+        float jitterZ = (i % 19) / 19f - 0.5f;
+        Vector3 turbulence = new Vector3(jitterX, jitterY, jitterZ) * 0.3f;
+
+        Vector3 rayDir = -(windDir + turbulence).normalized;
+
+        int currentCell = i;
+        int previousCell = -1;
+        float maxAltCrossed = topo.altitude;
+        int steps = 0;
+        int maxSteps = 60;
+        bool hitOcean = false;
+
+        float currentProgress = Vector3.Dot(pos, rayDir);
+
+        while (steps < maxSteps)
+        {
+            int offset = neighborOffsets[currentCell];
+            int count = neighborCounts[currentCell];
+
+            int bestNeighbor = -1;
+            float bestDot = -2f;
+            float bestProgress = currentProgress;
+
+            for (int n = 0; n < count; n++)
+            {
+                int neighborIdx = neighbors[offset + n];
+
+                if (neighborIdx == previousCell) continue;
+
+                Vector3 neighborPos = topologies[neighborIdx].localPosition.normalized;
+
+                float progress = Vector3.Dot(neighborPos, rayDir);
+                if (progress <= currentProgress + 0.0001f) continue;
+
+                Vector3 dirToNeighbor = (neighborPos - topologies[currentCell].localPosition.normalized).normalized;
+                float d = Vector3.Dot(dirToNeighbor, rayDir);
+
+                if (d > bestDot)
+                {
+                    bestDot = d;
+                    bestNeighbor = neighborIdx;
+                    bestProgress = progress;
+                }
+            }
+
+            if (bestNeighbor == -1 || bestDot < -0.5f) break;
+
+            previousCell = currentCell;
+            currentCell = bestNeighbor;
+
+            float cellAlt = topologies[currentCell].altitude;
+            if (cellAlt > maxAltCrossed) maxAltCrossed = cellAlt;
+
+            if (waterLevel > -5000f && cellAlt < waterLevel)
+            {
+                hitOcean = true;
+                break;
+            }
+
+            steps++;
+        }
+
+        if (!hitOcean)
+        {
+            rainFactors[i] = 0f;
+        }
+        else
+        {
+            float baseMoisture = 1.0f - ((float)steps / maxSteps);
+            float mountainPenalty = Mathf.Max(0, maxAltCrossed - topo.altitude) / 2000f;
+            rainFactors[i] = Mathf.Clamp01(baseMoisture - mountainPenalty);
+        }
+    }
+}
+
+[BurstCompile]
+public struct BlurMoistureJob : IJobParallelFor
+{
+    [ReadOnly] public NativeArray<float> inputRainFactors;
+    [ReadOnly] public NativeArray<int> neighborOffsets;
+    [ReadOnly] public NativeArray<byte> neighborCounts;
+    [ReadOnly] public NativeArray<int> neighbors;
+
+    public NativeArray<float> outputRainFactors;
+
+    public void Execute(int i)
+    {
+        float totalRain = inputRainFactors[i];
+        int offset = neighborOffsets[i];
+        int count = neighborCounts[i];
+
+        for (int n = 0; n < count; n++)
+        {
+            int neighborIdx = neighbors[offset + n];
+            totalRain += inputRainFactors[neighborIdx];
+        }
+
+        outputRainFactors[i] = totalRain / (count + 1);
+    }
+}
+
+[BurstCompile]
 public struct ClimateEquilibriumJob : IJobParallelFor
 {
     [ReadOnly] public NativeArray<CellTopology> topologies;
+    [ReadOnly] public NativeArray<float> rainFactors;
+
     public NativeArray<CellClimate> climates;
     public NativeArray<TerrainVisualData> terrainVisuals;
 
@@ -87,7 +255,7 @@ public struct ClimateEquilibriumJob : IJobParallelFor
         }
 
         if (clim.liquidDepth > 0) clim.moisture = 1.0f;
-        else clim.moisture = topo.rainFactor * state.globalRainStrength;
+        else clim.moisture = rainFactors[i] * state.globalRainStrength;
 
         if (localTemp < state.freezingPoint && state.waterLevel > -5000f && state.atmosphericPressure >= 0.05f)
         {
@@ -118,7 +286,7 @@ public struct ClimateEquilibriumJob : IJobParallelFor
             clim.iceCover = 0f;
         }
 
-        if (localTemp > 273.15f && localTemp < 323.15f && clim.moisture > 0.2f && clim.liquidDepth <= 0f)
+        if (localTemp > state.freezingPoint && localTemp < (state.freezingPoint + 50f) && clim.moisture > 0.2f && clim.liquidDepth <= 0f)
         {
             clim.biomass = Mathf.Clamp01(clim.moisture);
         }
@@ -135,7 +303,7 @@ public struct ClimateEquilibriumJob : IJobParallelFor
         float curvePower = 1.0f + (state.atmosphericPressure * 2.0f);
         float thickness = Mathf.Pow(Mathf.Max(0f, baseThickness), curvePower);
 
-        thickness -= topo.rainFactor * tAlt * 0.5f;
+        thickness -= rainFactors[i] * tAlt * 0.5f;
         thickness *= state.globalSoilThickness;
         thickness = Mathf.Clamp01(thickness);
 
@@ -165,11 +333,23 @@ public class ClimateResolver : MonoBehaviour
         public NativeArray<CellClimate> climates;
         public NativeArray<TerrainVisualData> terrainVisuals;
 
+        public NativeArray<int> neighborOffsets;
+        public NativeArray<byte> neighborCounts;
+        public NativeArray<int> neighbors;
+
+        public NativeArray<float> rainFactors;
+        public NativeArray<float> blurredRainFactors;
+
         public void Dispose()
         {
             if (topologies.IsCreated) topologies.Dispose();
             if (climates.IsCreated) climates.Dispose();
             if (terrainVisuals.IsCreated) terrainVisuals.Dispose();
+            if (neighborOffsets.IsCreated) neighborOffsets.Dispose();
+            if (neighborCounts.IsCreated) neighborCounts.Dispose();
+            if (neighbors.IsCreated) neighbors.Dispose();
+            if (rainFactors.IsCreated) rainFactors.Dispose();
+            if (blurredRainFactors.IsCreated) blurredRainFactors.Dispose();
         }
     }
 
@@ -198,13 +378,25 @@ public class ClimateResolver : MonoBehaviour
             }
             maxAltitudes[simDataList.Count] = maxAlt;
 
+            NativeArray<float> initialRain = new NativeArray<float>(body.localViewData.topologies.Length, Allocator.Persistent);
+            NativeArray<float> blurBuffer = new NativeArray<float>(body.localViewData.topologies.Length, Allocator.Persistent);
+
+            for (int j = 0; j < initialRain.Length; j++) initialRain[j] = body.localViewData.topologies[j].rainFactor;
+
             simDataList.Add(new PlanetSimulationData
             {
                 body = body,
                 meshData = body.localViewData,
                 topologies = new NativeArray<CellTopology>(body.localViewData.topologies, Allocator.Persistent),
                 climates = new NativeArray<CellClimate>(body.localViewData.climates, Allocator.Persistent),
-                terrainVisuals = new NativeArray<TerrainVisualData>(body.localViewData.terrainVisuals, Allocator.Persistent)
+                terrainVisuals = new NativeArray<TerrainVisualData>(body.localViewData.terrainVisuals, Allocator.Persistent),
+
+                neighborOffsets = new NativeArray<int>(body.geometryTemplate.neighborOffsets, Allocator.Persistent),
+                neighborCounts = new NativeArray<byte>(body.geometryTemplate.neighborCounts, Allocator.Persistent),
+                neighbors = new NativeArray<int>(body.geometryTemplate.neighbors, Allocator.Persistent),
+
+                rainFactors = initialRain,
+                blurredRainFactors = blurBuffer
             });
         }
 
@@ -288,6 +480,56 @@ public class ClimateResolver : MonoBehaviour
 
         for (int i = 0; i < cycles; i++)
         {
+            NativeList<JobHandle> moistureHandles = new NativeList<JobHandle>(simDataList.Count, Allocator.Temp);
+
+            for (int s = 0; s < simDataList.Count; s++)
+            {
+                var simData = simDataList[s];
+                if (simData.body.HasCoastlineChanged(simData.body.waterLevel))
+                {
+                    CalculateMoistureJob mJob = new CalculateMoistureJob
+                    {
+                        topologies = simData.topologies,
+                        neighborOffsets = simData.neighborOffsets,
+                        neighborCounts = simData.neighborCounts,
+                        neighbors = simData.neighbors,
+                        rainFactors = simData.rainFactors,
+                        waterLevel = simData.body.waterLevel,
+                        isTidallyLocked = simData.body.isTidallyLocked,
+                        sunDirection = Vector3.right
+                    };
+                    JobHandle mHandle = mJob.Schedule(simData.topologies.Length, 64);
+
+                    BlurMoistureJob bJob = new BlurMoistureJob
+                    {
+                        inputRainFactors = simData.rainFactors,
+                        neighborOffsets = simData.neighborOffsets,
+                        neighborCounts = simData.neighborCounts,
+                        neighbors = simData.neighbors,
+                        outputRainFactors = simData.blurredRainFactors
+                    };
+                    JobHandle bHandle = bJob.Schedule(simData.topologies.Length, 64, mHandle);
+
+                    moistureHandles.Add(bHandle);
+
+                    simData.body.lastCalculatedWaterLevel = simData.body.waterLevel;
+                }
+            }
+
+            if (moistureHandles.Length > 0)
+            {
+                JobHandle.CompleteAll(moistureHandles.AsArray());
+
+                for (int s = 0; s < simDataList.Count; s++)
+                {
+                    if (simDataList[s].body.lastCalculatedWaterLevel == simDataList[s].body.waterLevel)
+                    {
+                        simDataList[s].blurredRainFactors.CopyTo(simDataList[s].rainFactors);
+                    }
+                }
+            }
+            moistureHandles.Dispose();
+
             NativeList<JobHandle> jobHandles = new NativeList<JobHandle>(simDataList.Count, Allocator.Temp);
 
             for (int s = 0; s < simDataList.Count; s++)
@@ -368,6 +610,7 @@ public class ClimateResolver : MonoBehaviour
                 ClimateEquilibriumJob job = new ClimateEquilibriumJob
                 {
                     topologies = simData.topologies,
+                    rainFactors = simData.rainFactors,
                     climates = simData.climates,
                     terrainVisuals = simData.terrainVisuals,
                     state = state
@@ -388,6 +631,14 @@ public class ClimateResolver : MonoBehaviour
                     UpdateVisuals(simData);
                     simData.terrainVisuals.CopyTo(simData.meshData.terrainVisuals);
                     simData.climates.CopyTo(simData.meshData.climates);
+
+                    for (int j = 0; j < simData.topologies.Length; j++)
+                    {
+                        var t = simData.topologies[j];
+                        t.rainFactor = simData.rainFactors[j];
+                        simData.topologies[j] = t;
+                    }
+                    simData.topologies.CopyTo(simData.meshData.topologies);
 
                     TerrainVisualData[] highResArray = simData.body.localViewData.terrainVisuals;
                     TerrainVisualData[] lowResArray = simData.body.systemViewData.terrainVisuals;

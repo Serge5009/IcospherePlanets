@@ -213,6 +213,7 @@ public class SystemDataGenerator : MonoBehaviour
         body.oceanColor = Color.black;
         body.oceanVolumeKm3 = 0;
         body.waterLevel = -9999f;
+        body.lastCalculatedWaterLevel = -9999f; // FIXED
     }
 
     private void CalculateCoreAndMagnetosphere(CelestialBody body)
@@ -295,6 +296,21 @@ public class SystemDataGenerator : MonoBehaviour
                 }
             }
 
+            if (body.waterLevel > -5000f && body.oceanLiquid != null && body.oceanLiquid.supportsCarbonCycle)
+            {
+                List<byte> keysToScrub = new List<byte>();
+                foreach (var key in body.atmosphericGasesKg.Keys)
+                {
+                    GasTemplate gas = DataLibrary.Instance.GetGas(key);
+                    if (gas != null && gas.isCarbonCycleGas) keysToScrub.Add(key);
+                }
+
+                foreach (var key in keysToScrub)
+                {
+                    body.atmosphericGasesKg[key] *= UnityEngine.Random.Range(0.05f, 0.2f);
+                }
+            }
+
             UpdateAtmosphericProperties(body);
         }
 
@@ -359,11 +375,11 @@ public class SystemDataGenerator : MonoBehaviour
         body.oceanLiquid = liquid;
 
         double maxBasinVolume = HypsometricMath.GetVolumeFromLevel(body, maxAltitude);
-
         float fillPercentage = UnityEngine.Random.Range(0.05f, 0.40f);
         body.oceanVolumeKm3 = maxBasinVolume * fillPercentage;
 
         body.waterLevel = HypsometricMath.GetLevelFromVolume(body, body.oceanVolumeKm3);
+        body.lastCalculatedWaterLevel = -9999f;
 
         body.oceanColor = liquid.shallowColor;
 
@@ -395,6 +411,7 @@ public class SystemDataGenerator : MonoBehaviour
 
         body.oceanVolumeKm3 = 0;
         body.waterLevel = -9999f;
+        body.lastCalculatedWaterLevel = -9999f;
         Debug.Log($"[Climate] {body.name} suffered a Runaway Greenhouse effect! Oceans boiled dry.");
     }
 
