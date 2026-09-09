@@ -287,7 +287,29 @@ public struct ClimateEquilibriumJob : IJobParallelFor
             clim.moisture = Mathf.Clamp01(rawMoisture - dryingFactor);
         }
 
-        if (localTemp < state.freezingPoint && state.waterLevel > -5000f && state.atmosphericPressure >= 0.05f)
+        if (state.atmosphericPressure < 0.05f)
+        {
+            if (localTemp > state.freezingPoint)
+            {
+                clim.liquidDepth = 0f;
+                clim.snowDepth = 0f;
+                clim.iceCover = 0f;
+                clim.moisture = 0f;
+            }
+            else
+            {
+                if (clim.liquidDepth > 0)
+                {
+                    clim.iceCover = 1.0f;
+                    clim.liquidDepth = 0f;
+                }
+                else
+                {
+                    clim.iceCover = Mathf.Clamp01(clim.snowDepth);
+                }
+            }
+        }
+        else if (localTemp < state.freezingPoint && state.waterLevel > -5000f)
         {
             float degreesBelow = state.freezingPoint - localTemp;
             float baselineFrost = degreesBelow * 0.02f;
@@ -343,7 +365,7 @@ public struct ClimateEquilibriumJob : IJobParallelFor
 
         TerrainVisualData vis = terrainVisuals[i];
         vis.bedrockColor = finalGroundCol;
-        vis.surfaceData = new Vector4(clim.iceCover, clim.biomass, clim.liquidDepth, 0f);
+
         vis.iceColorR = state.iceColor.x;
         vis.iceColorG = state.iceColor.y;
         vis.iceColorB = state.iceColor.z;
@@ -711,6 +733,7 @@ public class ClimateResolver : MonoBehaviour
                 foreach (var simData in simDataList)
                 {
                     UpdateVisuals(simData);
+
                     simData.terrainVisuals.CopyTo(simData.meshData.terrainVisuals);
                     simData.climates.CopyTo(simData.meshData.climates);
 

@@ -202,9 +202,10 @@ public class Planet : MonoBehaviour
 
         float wl = bodyData.waterLevel;
         float freezePt = bodyData.oceanLiquid != null ? bodyData.oceanLiquid.baseFreezingPointKelvin : 273.15f;
+        bool isVacuum = bodyData.surfacePressureAtm < 0.05f;
 
-        UpdateWaterArray(bodyData.localViewData, wl, freezePt);
-        UpdateWaterArray(bodyData.systemViewData, wl, freezePt);
+        UpdateWaterArray(bodyData.localViewData, wl, freezePt, isVacuum);
+        UpdateWaterArray(bodyData.systemViewData, wl, freezePt, isVacuum);
 
         foreach (Planet p in ActivePlanets)
         {
@@ -215,7 +216,7 @@ public class Planet : MonoBehaviour
         }
     }
 
-    private void UpdateWaterArray(PlanetMeshData data, float wl, float freezePt)
+    private void UpdateWaterArray(PlanetMeshData data, float wl, float freezePt, bool isVacuum)
     {
         if (data == null || data.topologies == null) return;
 
@@ -229,14 +230,30 @@ public class Planet : MonoBehaviour
             TerrainVisualData vis = data.terrainVisuals[i];
             vis.surfaceData.z = depth;
 
-            if (depth > 0 && data.climates[i].localTemperature < freezePt)
+            if (isVacuum)
             {
-                vis.surfaceData.x = 1f;
-                vis.surfaceData.z = 0f;
+                if (data.climates[i].localTemperature > freezePt)
+                {
+                    vis.surfaceData.z = 0f;
+                    vis.surfaceData.x = 0f;
+                }
+                else if (depth > 0)
+                {
+                    vis.surfaceData.x = 1f;
+                    vis.surfaceData.z = 0f;
+                }
             }
-            else if (depth > 0)
+            else
             {
-                vis.surfaceData.x = 0f;
+                if (depth > 0 && data.climates[i].localTemperature < freezePt)
+                {
+                    vis.surfaceData.x = 1f;
+                    vis.surfaceData.z = 0f;
+                }
+                else if (depth > 0)
+                {
+                    vis.surfaceData.x = 0f;
+                }
             }
 
             if (bodyData.oceanLiquid != null)
