@@ -861,5 +861,15 @@ public class ClimateResolver : MonoBehaviour
         body.globalSnowCoverage = (float)stats.snowCount / totalCells;
         body.globalBiomassCoverage = (float)stats.bioCount / totalCells;
         body.globalDesertCoverage = (float)stats.barrenCount / totalCells;
+
+        long pop = 0;
+        if (body.localViewData != null && body.localViewData.economies != null)
+        {
+            for (int i = 0; i < body.localViewData.economies.Length; i++)
+            {
+                pop += body.localViewData.economies[i].population;
+            }
+        }
+        body.globalPopulation = pop;
     }
 }

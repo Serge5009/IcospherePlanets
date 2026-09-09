@@ -96,6 +96,8 @@ public class CelestialBody
     public float globalBiomassCoverage;
     public float globalDesertCoverage;
 
+    public long globalPopulation;
+
     public double targetVaporMassKg;
     public double vaporExchangeRateKgPerMonth;
     public float globalRainStrength;
