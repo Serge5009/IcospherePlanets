@@ -118,30 +118,35 @@ public class UIInfoTab : UITabPanel
                 sb.AppendLine($"<b>Cloud Coverage:</b> {(currentBody.atmosphereCloudCoverage * 100f):F0}%");
 
                 sb.AppendLine("<b>Composition:</b>");
-                double totalMass = currentBody.GetTotalAtmosphereMassKg();
+                double totalMass = currentBody.atmosphericGasesKg.Values.Sum();
                 foreach (var kvp in currentBody.atmosphericGasesKg)
                 {
                     GasTemplate gas = DataLibrary.Instance.GetGas(kvp.Key);
                     string gasName = gas != null ? gas.gasName : $"ID {kvp.Key}";
                     double percentage = (kvp.Value / totalMass) * 100.0;
                     double massMt = kvp.Value / 1e9;
-                    sb.AppendLine($"  • {gasName}: {percentage:F1}% <size=80%>({massMt:F0} Mt)</size>");
+
+                    double volMt = 0;
+                    if (currentBody.frozenVolatilesKg.ContainsKey(kvp.Key)) volMt = currentBody.frozenVolatilesKg[kvp.Key] / 1e9;
+
+                    string volText = volMt > 0 ? $" <color=#55AAFF>(+{volMt:F0} Mt Frozen)</color>" : "";
+                    sb.AppendLine($"  • {gasName}: {percentage:F1}% <size=80%>({massMt:F0} Mt){volText}</size>");
                 }
             }
             else
             {
                 sb.AppendLine("<color=#FF5555>Vacuum (No Atmosphere)</color>");
-            }
 
-            if (currentBody.frozenVolatilesKg.Count > 0)
-            {
-                sb.AppendLine("<b>Frozen Volatiles:</b>");
-                foreach (var kvp in currentBody.frozenVolatilesKg)
+                if (currentBody.frozenVolatilesKg.Count > 0)
                 {
-                    GasTemplate gas = DataLibrary.Instance.GetGas(kvp.Key);
-                    string gasName = gas != null ? gas.gasName : $"ID {kvp.Key}";
-                    double massMt = kvp.Value / 1e9;
-                    sb.AppendLine($"  • {gasName} Ice: <size=80%>{massMt:F0} Mt</size>");
+                    sb.AppendLine("<b>Frozen Volatiles:</b>");
+                    foreach (var kvp in currentBody.frozenVolatilesKg)
+                    {
+                        GasTemplate gas = DataLibrary.Instance.GetGas(kvp.Key);
+                        string gasName = gas != null ? gas.gasName : $"ID {kvp.Key}";
+                        double volMt = kvp.Value / 1e9;
+                        sb.AppendLine($"  • {gasName}: <color=#55AAFF>{volMt:F0} Mt</color>");
+                    }
                 }
             }
         }
