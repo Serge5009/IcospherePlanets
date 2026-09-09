@@ -102,6 +102,9 @@ public class SimulationDirector : MonoBehaviour
 
                 double transferAmount = deltaVapor * 0.05;
 
+                body.targetVaporMassKg = targetVaporMass;
+                body.vaporExchangeRateKgPerMonth = transferAmount;
+
                 if (Math.Abs(transferAmount) > 1000000)
                 {
                     if (transferAmount > 0)
@@ -111,6 +114,8 @@ public class SimulationDirector : MonoBehaviour
 
                         body.oceanVolumeKm3 -= (transferAmount / 1e9);
                         body.atmosphericGasesKg[vaporId] += transferAmount;
+
+                        body.vaporExchangeRateKgPerMonth = transferAmount;
                     }
                     else
                     {
@@ -118,11 +123,22 @@ public class SimulationDirector : MonoBehaviour
 
                         body.oceanVolumeKm3 += (Math.Abs(transferAmount) / 1e9);
                         body.atmosphericGasesKg[vaporId] += transferAmount;
+
+                        body.vaporExchangeRateKgPerMonth = transferAmount;
                     }
 
                     atmosphereChanged = true;
                     oceanChanged = true;
                 }
+                else
+                {
+                    body.vaporExchangeRateKgPerMonth = 0;
+                }
+            }
+            else
+            {
+                body.targetVaporMassKg = 0;
+                body.vaporExchangeRateKgPerMonth = 0;
             }
 
             List<byte> keys = new List<byte>(body.atmosphericGasesKg.Keys);

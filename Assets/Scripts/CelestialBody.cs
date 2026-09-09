@@ -57,7 +57,6 @@ public class CelestialBody
     public float lastCalculatedWaterLevel = -9999f;
 
     public bool isHighResReady = false;
-
     public bool isVisualsDirty = false;
 
     public BedrockTemplate dominantBedrock;
@@ -96,6 +95,10 @@ public class CelestialBody
     public float globalSnowCoverage;
     public float globalBiomassCoverage;
     public float globalDesertCoverage;
+
+    public double targetVaporMassKg;
+    public double vaporExchangeRateKgPerMonth;
+    public float globalRainStrength;
 
     public Color atmosphereSkyColor;
     public Color atmosphereCloudColor;

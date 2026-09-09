@@ -4,6 +4,8 @@ using UnityEngine.EventSystems;
 using TMPro;
 using System.Text;
 using System.Collections.Generic;
+using System.Linq;
+using System;
 
 public class UIOceanTab : UITabPanel, IPointerUpHandler
 {
@@ -15,6 +17,14 @@ public class UIOceanTab : UITabPanel, IPointerUpHandler
     [Header("Controls")]
     public Button addWaterBtn;
     public Button removeWaterBtn;
+
+    [Header("Atmosphere Graph")]
+    public RawImage atmosphereImage;
+    public int atmosGraphHeight = 64;
+    private Texture2D atmosphereTexture;
+
+    [Header("Moisture Info")]
+    public TextMeshProUGUI moistureInfoText;
 
     [Header("Hypsometric Graph")]
     public RawImage graphImage;
@@ -51,16 +61,24 @@ public class UIOceanTab : UITabPanel, IPointerUpHandler
         if (removeWaterBtn != null)
             removeWaterBtn.onClick.AddListener(() => ChangeVolume(-10000000));
 
-        InitializeGraphTexture();
+        InitializeTextures();
     }
 
-    private void InitializeGraphTexture()
+    private void InitializeTextures()
     {
-        if (graphImage == null) return;
+        if (graphImage != null)
+        {
+            graphTexture = new Texture2D(graphWidth, graphHeight, TextureFormat.RGBA32, false);
+            graphTexture.filterMode = FilterMode.Bilinear;
+            graphImage.texture = graphTexture;
+        }
 
-        graphTexture = new Texture2D(graphWidth, graphHeight, TextureFormat.RGBA32, false);
-        graphTexture.filterMode = FilterMode.Bilinear;
-        graphImage.texture = graphTexture;
+        if (atmosphereImage != null)
+        {
+            atmosphereTexture = new Texture2D(graphWidth, atmosGraphHeight, TextureFormat.RGBA32, false);
+            atmosphereTexture.filterMode = FilterMode.Bilinear;
+            atmosphereImage.texture = atmosphereTexture;
+        }
     }
 
     protected override void Refresh()
@@ -90,6 +108,8 @@ public class UIOceanTab : UITabPanel, IPointerUpHandler
         }
 
         UpdateStatsText();
+        UpdateMoistureInfo();
+        DrawAtmosphereGraph();
         DrawHypsometricGraph();
     }
 
@@ -119,7 +139,6 @@ public class UIOceanTab : UITabPanel, IPointerUpHandler
     public void OnPointerUp(PointerEventData eventData)
     {
         if (currentBody == null) return;
-
         ClimateResolver.Instance.TickClimateEquilibrium(new List<CelestialBody> { currentBody });
     }
 
@@ -186,12 +205,106 @@ public class UIOceanTab : UITabPanel, IPointerUpHandler
         statsText.text = sb.ToString();
     }
 
+    private void UpdateMoistureInfo()
+    {
+        if (moistureInfoText == null || currentBody == null) return;
+
+        StringBuilder sb = new StringBuilder();
+
+        if (currentBody.oceanLiquid != null && currentBody.oceanLiquid.evaporatesInto != null)
+        {
+            byte vaporId = currentBody.oceanLiquid.evaporatesInto.gasId;
+            double currentVapor = currentBody.atmosphericGasesKg.ContainsKey(vaporId) ? currentBody.atmosphericGasesKg[vaporId] : 0;
+
+            string targetStr = currentBody.targetVaporMassKg >= double.MaxValue * 0.9 ? "<color=#FF5555>Infinite (Runaway)</color>" : $"{currentBody.targetVaporMassKg / 1e9:N0} Mt";
+
+            sb.AppendLine($"<b>Current Vapor:</b> {currentVapor / 1e9:N0} Mt");
+            sb.AppendLine($"<b>Target Vapor:</b> {targetStr}");
+
+            string exchangeStr = "Equilibrium";
+            if (currentBody.vaporExchangeRateKgPerMonth > 0) exchangeStr = $"<color=#FF5555>+{(currentBody.vaporExchangeRateKgPerMonth / 1e9):N0} Mt/mo (Evaporating)</color>";
+            else if (currentBody.vaporExchangeRateKgPerMonth < 0) exchangeStr = $"<color=#55AAFF>-{(Math.Abs(currentBody.vaporExchangeRateKgPerMonth) / 1e9):N0} Mt/mo (Condensing)</color>";
+
+            sb.AppendLine($"<b>Exchange Rate:</b> {exchangeStr}");
+        }
+        else
+        {
+            sb.AppendLine("<b>Current Vapor:</b> 0 Mt");
+            sb.AppendLine("<b>Target Vapor:</b> 0 Mt");
+            sb.AppendLine("<b>Exchange Rate:</b> None");
+        }
+
+        sb.AppendLine($"<b>Global Rain Factor:</b> {(currentBody.globalRainStrength * 100f):F1}%");
+
+        moistureInfoText.text = sb.ToString();
+    }
+
+    private void DrawAtmosphereGraph()
+    {
+        if (atmosphereTexture == null || currentBody == null || DataLibrary.Instance == null) return;
+
+        Color[] pixels = new Color[graphWidth * atmosGraphHeight];
+        for (int i = 0; i < pixels.Length; i++) pixels[i] = graphBackgroundColor;
+
+        double totalMass = currentBody.GetTotalAtmosphereMassKg();
+        if (totalMass <= 0)
+        {
+            atmosphereTexture.SetPixels(pixels);
+            atmosphereTexture.Apply();
+            return;
+        }
+
+        var sortedGases = currentBody.atmosphericGasesKg
+            .Select(kvp => new { Gas = DataLibrary.Instance.GetGas(kvp.Key), Mass = kvp.Value })
+            .Where(g => g.Gas != null && g.Mass > 0)
+            .OrderByDescending(g => g.Gas.molarMass)
+            .ToList();
+
+        int currentY = 0;
+
+        foreach (var g in sortedGases)
+        {
+            float fraction = (float)(g.Mass / totalMass);
+            int layerHeight = Mathf.RoundToInt(fraction * atmosGraphHeight);
+
+            if (layerHeight == 0) continue;
+
+            int endY = Mathf.Min(currentY + layerHeight, atmosGraphHeight);
+
+            for (int y = currentY; y < endY; y++)
+            {
+                float verticalGradient = (float)(y - currentY) / layerHeight;
+
+                for (int x = 0; x < graphWidth; x++)
+                {
+                    Color pixelColor;
+
+                    if (g.Gas.formsClouds)
+                    {
+                        float noise = Mathf.PerlinNoise(x * 0.05f, y * 0.1f);
+                        pixelColor = Color.Lerp(g.Gas.skyColor, g.Gas.cloudColor, noise);
+                    }
+                    else
+                    {
+                        Color fadeColor = new Color(g.Gas.skyColor.r * 0.5f, g.Gas.skyColor.g * 0.5f, g.Gas.skyColor.b * 0.5f, 1f);
+                        pixelColor = Color.Lerp(g.Gas.skyColor, fadeColor, verticalGradient);
+                    }
+
+                    pixels[y * graphWidth + x] = pixelColor;
+                }
+            }
+            currentY = endY;
+        }
+
+        atmosphereTexture.SetPixels(pixels);
+        atmosphereTexture.Apply();
+    }
+
     private void DrawHypsometricGraph()
     {
         if (graphTexture == null || currentBody == null || currentBody.hypsometricCurveSqKm == null) return;
 
         Color[] pixels = new Color[graphWidth * graphHeight];
-
         for (int i = 0; i < pixels.Length; i++) pixels[i] = graphBackgroundColor;
 
         int maxAlt = currentBody.hypsometricCurveSqKm.Length - 1;
@@ -200,11 +313,12 @@ public class UIOceanTab : UITabPanel, IPointerUpHandler
 
         Color shallowCol = currentBody.oceanLiquid != null ? currentBody.oceanLiquid.shallowColor : new Color(0.2f, 0.6f, 1f);
         Color deepCol = currentBody.oceanLiquid != null ? currentBody.oceanLiquid.deepColor : new Color(0f, 0.1f, 0.4f);
+        Color iceCol = currentBody.oceanLiquid != null ? currentBody.oceanLiquid.iceColor : Color.white;
 
         int[] curveYPositions = new int[graphWidth];
         for (int x = 0; x < graphWidth; x++)
         {
-            double targetArea = ((double)x / (graphWidth - 1)) * totalArea;
+            double targetArea = (1.0 - ((double)x / (graphWidth - 1))) * totalArea;
 
             int altAtX = 0;
             for (int i = 0; i <= maxAlt; i++)
@@ -221,6 +335,8 @@ public class UIOceanTab : UITabPanel, IPointerUpHandler
         }
 
         int waterLevelY = Mathf.FloorToInt((currentBody.waterLevel / graphMaxAlt) * graphHeight);
+
+        int iceStartX = graphWidth - Mathf.FloorToInt(currentBody.globalIceCoverage * graphWidth);
 
         for (int x = 0; x < graphWidth; x++)
         {
@@ -247,6 +363,11 @@ public class UIOceanTab : UITabPanel, IPointerUpHandler
                     Color waterCol = Color.Lerp(shallowCol, deepCol, depthT);
 
                     pixels[pixelIndex] = Color.Lerp(graphBackgroundColor, waterCol, 0.8f);
+                }
+
+                if (x >= iceStartX && y >= waterLevelY && y <= waterLevelY + 2)
+                {
+                    pixels[pixelIndex] = iceCol;
                 }
             }
         }

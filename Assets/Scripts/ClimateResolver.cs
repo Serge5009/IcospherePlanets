@@ -820,6 +820,8 @@ public class ClimateResolver : MonoBehaviour
             poleInsolation = 0.5f + (t * 0.5f);
         }
 
+        body.globalRainStrength = rainStrength;
+
         return new PlanetClimateState
         {
             blackbodyTemp = blackbody,
