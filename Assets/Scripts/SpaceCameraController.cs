@@ -372,4 +372,15 @@ public class SpaceCameraController : MonoBehaviour
         transform.position = position;
         transform.rotation = baseRotation;
     }
+
+    public void ResetToDefault()
+    {
+        focusedBody = null;
+        currentState = CameraState.System;
+        currentZLevel = 1f;
+        currentFocusPoint = Vector3.zero;
+        targetDistance = 100f;
+        currentDistance = 100f;
+        isInitialized = false;
+    }
 }

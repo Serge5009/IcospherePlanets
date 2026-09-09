@@ -14,13 +14,22 @@ public class GeneratorUI : MonoBehaviour
 
     private void Start()
     {
-        menuPanel.SetActive(true);
-        statusText.text = "Ready to Generate.";
+        ShowMenu();
 
         cyclesSlider.onValueChanged.AddListener(UpdateCyclesText);
         generateButton.onClick.AddListener(StartGeneration);
 
         UpdateCyclesText(cyclesSlider.value);
+    }
+
+    public void ShowMenu()
+    {
+        if (menuPanel != null) menuPanel.SetActive(true);
+        if (statusText != null)
+        {
+            statusText.gameObject.SetActive(true);
+            statusText.text = "Ready to Generate.";
+        }
     }
 
     private void UpdateCyclesText(float value)
@@ -46,6 +55,11 @@ public class GeneratorUI : MonoBehaviour
 
         statusText.text = "Simulation Complete.";
 
-        Destroy(statusText.gameObject, 3f);
+        Invoke(nameof(HideStatusText), 3f);
+    }
+
+    private void HideStatusText()
+    {
+        if (statusText != null) statusText.gameObject.SetActive(false);
     }
 }
