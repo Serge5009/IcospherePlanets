@@ -34,6 +34,17 @@ public struct PlanetClimateState
     public float poleInsolation;
 }
 
+public struct PlanetStats
+{
+    public float minTemp;
+    public float maxTemp;
+    public int oceanCount;
+    public int iceCount;
+    public int snowCount;
+    public int bioCount;
+    public int barrenCount;
+}
+
 [BurstCompile]
 public struct CalculateMoistureJob : IJobParallelFor
 {
@@ -365,11 +376,71 @@ public struct ClimateEquilibriumJob : IJobParallelFor
 
         TerrainVisualData vis = terrainVisuals[i];
         vis.bedrockColor = finalGroundCol;
-
         vis.iceColorR = state.iceColor.x;
         vis.iceColorG = state.iceColor.y;
         vis.iceColorB = state.iceColor.z;
         terrainVisuals[i] = vis;
+    }
+}
+
+[BurstCompile]
+public struct PackVisualsJob : IJobParallelFor
+{
+    [ReadOnly] public NativeArray<CellClimate> climates;
+    public NativeArray<TerrainVisualData> terrainVisuals;
+
+    public void Execute(int i)
+    {
+        TerrainVisualData vis = terrainVisuals[i];
+        CellClimate clim = climates[i];
+        vis.surfaceData = new Vector4(clim.iceCover, clim.biomass, clim.liquidDepth, 0f);
+        terrainVisuals[i] = vis;
+    }
+}
+
+[BurstCompile]
+public struct CalculateStatsJob : IJob
+{
+    [ReadOnly] public NativeArray<CellClimate> climates;
+    [ReadOnly] public NativeArray<CellTopology> topologies;
+    public float waterLevel;
+    public NativeArray<PlanetStats> result;
+
+    public void Execute()
+    {
+        float minT = float.MaxValue;
+        float maxT = float.MinValue;
+        int ocean = 0, ice = 0, snow = 0, bio = 0, barren = 0;
+
+        for (int i = 0; i < climates.Length; i++)
+        {
+            float t = climates[i].localTemperature;
+            if (t < minT) minT = t;
+            if (t > maxT) maxT = t;
+
+            if (waterLevel > -5000f && topologies[i].altitude < waterLevel)
+            {
+                if (climates[i].iceCover > 0.5f) ice++;
+                else ocean++;
+            }
+            else
+            {
+                if (climates[i].iceCover > 0.5f) snow++;
+                else if (climates[i].biomass > 0.5f) bio++;
+                else barren++;
+            }
+        }
+
+        result[0] = new PlanetStats
+        {
+            minTemp = minT,
+            maxTemp = maxT,
+            oceanCount = ocean,
+            iceCount = ice,
+            snowCount = snow,
+            bioCount = bio,
+            barrenCount = barren
+        };
     }
 }
 
@@ -381,6 +452,8 @@ public class ClimateResolver : MonoBehaviour
     {
         public CelestialBody body;
         public PlanetMeshData meshData;
+        public float maxAltitude;
+
         public NativeArray<CellTopology> topologies;
         public NativeArray<CellClimate> climates;
         public NativeArray<TerrainVisualData> terrainVisuals;
@@ -392,6 +465,8 @@ public class ClimateResolver : MonoBehaviour
         public NativeArray<float> rainFactors;
         public NativeArray<float> blurredRainFactors;
 
+        public NativeArray<PlanetStats> statsResult;
+
         public void Dispose()
         {
             if (topologies.IsCreated) topologies.Dispose();
@@ -402,8 +477,16 @@ public class ClimateResolver : MonoBehaviour
             if (neighbors.IsCreated) neighbors.Dispose();
             if (rainFactors.IsCreated) rainFactors.Dispose();
             if (blurredRainFactors.IsCreated) blurredRainFactors.Dispose();
+            if (statsResult.IsCreated) statsResult.Dispose();
         }
     }
+
+    private Dictionary<CelestialBody, PlanetSimulationData> activeSimulations = new Dictionary<CelestialBody, PlanetSimulationData>();
+
+    private Queue<CelestialBody> pendingUpdates = new Queue<CelestialBody>();
+    private bool isJobRunning = false;
+    private JobHandle currentJobHandle;
+    private PlanetSimulationData currentProcessingData;
 
     private void Awake()
     {
@@ -411,12 +494,48 @@ public class ClimateResolver : MonoBehaviour
         else Instance = this;
     }
 
-    public async Task ResolveEquilibriumAsync(List<CelestialBody> bodies, int cycles, Action<string> onProgress = null)
+    private void OnDestroy()
     {
-        Debug.Log($"Resolving Climate Equilibrium for {cycles} cycles...");
+        if (isJobRunning) currentJobHandle.Complete();
+        foreach (var sim in activeSimulations.Values) sim.Dispose();
+        activeSimulations.Clear();
+    }
+
+    private void Update()
+    {
+        if (isJobRunning)
+        {
+            if (currentJobHandle.IsCompleted)
+            {
+                currentJobHandle.Complete();
+                FinalizePlanetUpdate(currentProcessingData);
+                isJobRunning = false;
+                currentProcessingData = null;
+            }
+        }
+        else if (pendingUpdates.Count > 0)
+        {
+            CelestialBody nextBody = pendingUpdates.Dequeue();
+            if (activeSimulations.TryGetValue(nextBody, out PlanetSimulationData simData))
+            {
+                currentProcessingData = simData;
+                currentJobHandle = SchedulePlanetUpdate(simData);
+                isJobRunning = true;
+            }
+        }
+    }
+
+    public async Task GenerateInitialClimateAsync(List<CelestialBody> bodies, int cycles, Action<string> onProgress = null)
+    {
+        Debug.Log($"Generating Initial Climate Equilibrium for {cycles} cycles...");
+
+        if (isJobRunning) currentJobHandle.Complete();
+        foreach (var sim in activeSimulations.Values) sim.Dispose();
+        activeSimulations.Clear();
+        pendingUpdates.Clear();
+        isJobRunning = false;
 
         List<PlanetSimulationData> simDataList = new List<PlanetSimulationData>();
-        float[] maxAltitudes = new float[bodies.Count];
 
         for (int i = 0; i < bodies.Count; i++)
         {
@@ -428,17 +547,16 @@ public class ClimateResolver : MonoBehaviour
             {
                 if (topo.altitude > maxAlt) maxAlt = topo.altitude;
             }
-            maxAltitudes[simDataList.Count] = maxAlt;
 
             NativeArray<float> initialRain = new NativeArray<float>(body.localViewData.topologies.Length, Allocator.Persistent);
             NativeArray<float> blurBuffer = new NativeArray<float>(body.localViewData.topologies.Length, Allocator.Persistent);
-
             for (int j = 0; j < initialRain.Length; j++) initialRain[j] = body.localViewData.topologies[j].rainFactor;
 
-            simDataList.Add(new PlanetSimulationData
+            PlanetSimulationData simData = new PlanetSimulationData
             {
                 body = body,
                 meshData = body.localViewData,
+                maxAltitude = maxAlt,
                 topologies = new NativeArray<CellTopology>(body.localViewData.topologies, Allocator.Persistent),
                 climates = new NativeArray<CellClimate>(body.localViewData.climates, Allocator.Persistent),
                 terrainVisuals = new NativeArray<TerrainVisualData>(body.localViewData.terrainVisuals, Allocator.Persistent),
@@ -448,103 +566,55 @@ public class ClimateResolver : MonoBehaviour
                 neighbors = new NativeArray<int>(body.geometryTemplate.neighbors, Allocator.Persistent),
 
                 rainFactors = initialRain,
-                blurredRainFactors = blurBuffer
-            });
+                blurredRainFactors = blurBuffer,
+                statsResult = new NativeArray<PlanetStats>(1, Allocator.Persistent)
+            };
+
+            simDataList.Add(simData);
+            activeSimulations.Add(body, simData);
         }
 
-        try
+        int phase1Cycles = cycles / 2;
+        await RunGenerationCycles(simDataList, bodies, phase1Cycles, "Phase 1 (Dry)", onProgress);
+
+        onProgress?.Invoke("Phase 2: Seeding Oceans...");
+        for (int s = 0; s < simDataList.Count; s++)
         {
-            double starSolarMasses = SystemDataGenerator.Instance.star.massKg / AstroMath.SOLAR_MASS_KG;
-            double starLuminosity = AstroMath.CalculateLuminosity(starSolarMasses);
+            var simData = simDataList[s];
 
-            int phase1Cycles = cycles / 2;
-            await RunSimulationCycles(simDataList, bodies, maxAltitudes, phase1Cycles, "Phase 1 (Dry)", onProgress);
+            CalculateStatsJob statJob = new CalculateStatsJob { climates = simData.climates, topologies = simData.topologies, waterLevel = simData.body.waterLevel, result = simData.statsResult };
+            statJob.Schedule().Complete();
+            simData.body.globalMinTemperature = simData.statsResult[0].minTemp;
+            simData.body.globalMaxTemperature = simData.statsResult[0].maxTemp;
 
-            onProgress?.Invoke("Phase 2: Seeding Oceans...");
-            for (int s = 0; s < simDataList.Count; s++)
+            bool seeded = SystemDataGenerator.Instance.TrySeedOceans(simData.body, simData.maxAltitude);
+            if (seeded)
             {
-                var simData = simDataList[s];
-
-                float minT = float.MaxValue;
-                float maxT = float.MinValue;
-                for (int i = 0; i < simData.climates.Length; i++)
+                Color iceCol = simData.body.oceanLiquid != null ? simData.body.oceanLiquid.iceColor : Color.white;
+                for (int i = 0; i < simData.terrainVisuals.Length; i++)
                 {
-                    float t = simData.climates[i].localTemperature;
-                    if (t < minT) minT = t;
-                    if (t > maxT) maxT = t;
-                }
-                simData.body.globalMinTemperature = minT;
-                simData.body.globalMaxTemperature = maxT;
-
-                bool seeded = SystemDataGenerator.Instance.TrySeedOceans(simData.body, maxAltitudes[s]);
-                if (seeded)
-                {
-                    Color iceCol = simData.body.oceanLiquid != null ? simData.body.oceanLiquid.iceColor : Color.white;
-                    for (int i = 0; i < simData.terrainVisuals.Length; i++)
-                    {
-                        TerrainVisualData vis = simData.terrainVisuals[i];
-                        vis.liquidColor = simData.body.oceanColor;
-                        vis.iceColorR = iceCol.r;
-                        vis.iceColorG = iceCol.g;
-                        vis.iceColorB = iceCol.b;
-                        simData.terrainVisuals[i] = vis;
-                    }
+                    TerrainVisualData vis = simData.terrainVisuals[i];
+                    vis.liquidColor = simData.body.oceanColor;
+                    vis.iceColorR = iceCol.r;
+                    vis.iceColorG = iceCol.g;
+                    vis.iceColorB = iceCol.b;
+                    simData.terrainVisuals[i] = vis;
                 }
             }
-            await Task.Yield();
-
-            int phase3Cycles = cycles - phase1Cycles;
-            await RunSimulationCycles(simDataList, bodies, maxAltitudes, phase3Cycles, "Phase 3 (Wet)", onProgress);
-
-            foreach (var simData in simDataList)
-            {
-                float minT = float.MaxValue;
-                float maxT = float.MinValue;
-
-                int oceanCount = 0;
-                int iceCount = 0;
-                int snowCount = 0;
-                int bioCount = 0;
-                int barrenCount = 0;
-
-                for (int i = 0; i < simData.climates.Length; i++)
-                {
-                    CellClimate clim = simData.climates[i];
-
-                    float t = clim.localTemperature;
-                    if (t < minT) minT = t;
-                    if (t > maxT) maxT = t;
-
-                    if (simData.body.waterLevel > -5000f && simData.topologies[i].altitude < simData.body.waterLevel)
-                    {
-                        if (clim.iceCover > 0.5f) iceCount++;
-                        else oceanCount++;
-                    }
-                    else
-                    {
-                        if (clim.iceCover > 0.5f) snowCount++;
-                        else if (clim.biomass > 0.5f) bioCount++;
-                        else barrenCount++;
-                    }
-                }
-
-                simData.body.globalMinTemperature = minT;
-                simData.body.globalMaxTemperature = maxT;
-
-                float totalCells = simData.climates.Length;
-                simData.body.globalOceanCoverage = oceanCount / totalCells;
-                simData.body.globalIceCoverage = iceCount / totalCells;
-                simData.body.globalSnowCoverage = snowCount / totalCells;
-                simData.body.globalBiomassCoverage = bioCount / totalCells;
-                simData.body.globalDesertCoverage = barrenCount / totalCells;
-            }
         }
-        finally
+        await Task.Yield();
+
+        int phase3Cycles = cycles - phase1Cycles;
+        await RunGenerationCycles(simDataList, bodies, phase3Cycles, "Phase 3 (Wet)", onProgress);
+
+        foreach (var simData in simDataList)
         {
-            foreach (var simData in simDataList) simData.Dispose();
+            CalculateStatsJob statJob = new CalculateStatsJob { climates = simData.climates, topologies = simData.topologies, waterLevel = simData.body.waterLevel, result = simData.statsResult };
+            statJob.Schedule().Complete();
+            ApplyStatsToBody(simData.body, simData.statsResult[0], simData.climates.Length);
         }
 
-        Debug.Log("Climate Equilibrium Resolved!");
+        Debug.Log("Initial Climate Equilibrium Resolved!");
 
         GeopoliticsGenerator.GenerateNations(bodies);
 
@@ -554,177 +624,130 @@ public class ClimateResolver : MonoBehaviour
         }
     }
 
-    private async Task RunSimulationCycles(List<PlanetSimulationData> simDataList, List<CelestialBody> bodies, float[] maxAltitudes, int cycles, string phaseName, Action<string> onProgress)
+    public void TickClimateEquilibrium(List<CelestialBody> bodies)
     {
+        if (bodies == null || bodies.Count == 0) return;
+
+        foreach (var body in bodies)
+        {
+            if (!pendingUpdates.Contains(body))
+            {
+                pendingUpdates.Enqueue(body);
+            }
+        }
+    }
+
+    private JobHandle SchedulePlanetUpdate(PlanetSimulationData simData)
+    {
+        CelestialBody body = simData.body;
+        JobHandle currentDependency = default;
+
+        if (body.HasCoastlineChanged(body.waterLevel))
+        {
+            CalculateMoistureJob mJob = new CalculateMoistureJob
+            {
+                topologies = simData.topologies,
+                neighborOffsets = simData.neighborOffsets,
+                neighborCounts = simData.neighborCounts,
+                neighbors = simData.neighbors,
+                rainFactors = simData.rainFactors,
+                waterLevel = body.waterLevel,
+                isTidallyLocked = body.isTidallyLocked,
+                sunDirection = Vector3.right
+            };
+            JobHandle mHandle = mJob.Schedule(simData.topologies.Length, 64);
+
+            JobHandle bHandle1 = new BlurMoistureJob { inputRainFactors = simData.rainFactors, neighborOffsets = simData.neighborOffsets, neighborCounts = simData.neighborCounts, neighbors = simData.neighbors, outputRainFactors = simData.blurredRainFactors }.Schedule(simData.topologies.Length, 64, mHandle);
+            JobHandle bHandle2 = new BlurMoistureJob { inputRainFactors = simData.blurredRainFactors, neighborOffsets = simData.neighborOffsets, neighborCounts = simData.neighborCounts, neighbors = simData.neighbors, outputRainFactors = simData.rainFactors }.Schedule(simData.topologies.Length, 64, bHandle1);
+            JobHandle bHandle3 = new BlurMoistureJob { inputRainFactors = simData.rainFactors, neighborOffsets = simData.neighborOffsets, neighborCounts = simData.neighborCounts, neighbors = simData.neighbors, outputRainFactors = simData.blurredRainFactors }.Schedule(simData.topologies.Length, 64, bHandle2);
+
+            currentDependency = bHandle3;
+            body.lastCalculatedWaterLevel = body.waterLevel;
+        }
+
         double starSolarMasses = SystemDataGenerator.Instance.star.massKg / AstroMath.SOLAR_MASS_KG;
         double starLuminosity = AstroMath.CalculateLuminosity(starSolarMasses);
+        PlanetClimateState state = CalculateGlobalState(simData, starLuminosity);
 
+        ClimateEquilibriumJob cJob = new ClimateEquilibriumJob
+        {
+            topologies = simData.topologies,
+            rainFactors = simData.body.HasCoastlineChanged(simData.body.waterLevel) ? simData.blurredRainFactors : simData.rainFactors,
+            climates = simData.climates,
+            terrainVisuals = simData.terrainVisuals,
+            state = state
+        };
+        currentDependency = cJob.Schedule(simData.topologies.Length, 64, currentDependency);
+
+        PackVisualsJob vJob = new PackVisualsJob
+        {
+            climates = simData.climates,
+            terrainVisuals = simData.terrainVisuals
+        };
+        currentDependency = vJob.Schedule(simData.topologies.Length, 64, currentDependency);
+
+        CalculateStatsJob sJob = new CalculateStatsJob
+        {
+            climates = simData.climates,
+            topologies = simData.topologies,
+            waterLevel = body.waterLevel,
+            result = simData.statsResult
+        };
+        currentDependency = sJob.Schedule(currentDependency);
+
+        return currentDependency;
+    }
+
+    private void FinalizePlanetUpdate(PlanetSimulationData simData)
+    {
+        ApplyStatsToBody(simData.body, simData.statsResult[0], simData.climates.Length);
+
+        simData.terrainVisuals.CopyTo(simData.meshData.terrainVisuals);
+        simData.climates.CopyTo(simData.meshData.climates);
+
+        if (simData.body.lastCalculatedWaterLevel == simData.body.waterLevel)
+        {
+            simData.blurredRainFactors.CopyTo(simData.rainFactors);
+            for (int j = 0; j < simData.topologies.Length; j++)
+            {
+                var t = simData.topologies[j];
+                t.rainFactor = simData.rainFactors[j];
+                simData.topologies[j] = t;
+            }
+            simData.topologies.CopyTo(simData.meshData.topologies);
+        }
+
+        TerrainVisualData[] highResArray = simData.body.localViewData.terrainVisuals;
+        TerrainVisualData[] lowResArray = simData.body.systemViewData.terrainVisuals;
+        int[] map = simData.body.lowToHighMap;
+        for (int j = 0; j < lowResArray.Length; j++) lowResArray[j] = highResArray[map[j]];
+
+        if (simData.body.visualObject != null)
+        {
+            Planet p = simData.body.visualObject.GetComponent<Planet>();
+            if (p != null) p.UpdateTerrainBuffer();
+        }
+
+        if (MapModeManager.Instance != null)
+        {
+            MapModeManager.Instance.ApplyModeToAllPlanets();
+        }
+    }
+
+
+    private async Task RunGenerationCycles(List<PlanetSimulationData> simDataList, List<CelestialBody> bodies, int cycles, string phaseName, Action<string> onProgress)
+    {
         for (int i = 0; i < cycles; i++)
         {
-            NativeList<JobHandle> moistureHandles = new NativeList<JobHandle>(simDataList.Count, Allocator.Temp);
+            NativeList<JobHandle> handles = new NativeList<JobHandle>(simDataList.Count, Allocator.Temp);
 
-            for (int s = 0; s < simDataList.Count; s++)
+            foreach (var simData in simDataList)
             {
-                var simData = simDataList[s];
-                if (simData.body.HasCoastlineChanged(simData.body.waterLevel))
-                {
-                    CalculateMoistureJob mJob = new CalculateMoistureJob
-                    {
-                        topologies = simData.topologies,
-                        neighborOffsets = simData.neighborOffsets,
-                        neighborCounts = simData.neighborCounts,
-                        neighbors = simData.neighbors,
-                        rainFactors = simData.rainFactors,
-                        waterLevel = simData.body.waterLevel,
-                        isTidallyLocked = simData.body.isTidallyLocked,
-                        sunDirection = Vector3.right
-                    };
-                    JobHandle mHandle = mJob.Schedule(simData.topologies.Length, 64);
-
-                    JobHandle bHandle1 = new BlurMoistureJob { inputRainFactors = simData.rainFactors, neighborOffsets = simData.neighborOffsets, neighborCounts = simData.neighborCounts, neighbors = simData.neighbors, outputRainFactors = simData.blurredRainFactors }.Schedule(simData.topologies.Length, 64, mHandle);
-                    JobHandle bHandle2 = new BlurMoistureJob { inputRainFactors = simData.blurredRainFactors, neighborOffsets = simData.neighborOffsets, neighborCounts = simData.neighborCounts, neighbors = simData.neighbors, outputRainFactors = simData.rainFactors }.Schedule(simData.topologies.Length, 64, bHandle1);
-                    JobHandle bHandle3 = new BlurMoistureJob { inputRainFactors = simData.rainFactors, neighborOffsets = simData.neighborOffsets, neighborCounts = simData.neighborCounts, neighbors = simData.neighbors, outputRainFactors = simData.blurredRainFactors }.Schedule(simData.topologies.Length, 64, bHandle2);
-
-                    moistureHandles.Add(bHandle3);
-
-                    simData.body.lastCalculatedWaterLevel = simData.body.waterLevel;
-                }
+                handles.Add(SchedulePlanetUpdate(simData));
             }
 
-            if (moistureHandles.Length > 0)
-            {
-                JobHandle.CompleteAll(moistureHandles.AsArray());
-
-                for (int s = 0; s < simDataList.Count; s++)
-                {
-                    if (simDataList[s].body.lastCalculatedWaterLevel == simDataList[s].body.waterLevel)
-                    {
-                        simDataList[s].blurredRainFactors.CopyTo(simDataList[s].rainFactors);
-                    }
-                }
-            }
-            moistureHandles.Dispose();
-
-            NativeList<JobHandle> jobHandles = new NativeList<JobHandle>(simDataList.Count, Allocator.Temp);
-
-            for (int s = 0; s < simDataList.Count; s++)
-            {
-                var simData = simDataList[s];
-                CelestialBody body = simData.body;
-
-                float totalAlbedo = 0f;
-                float oceanArea = 0f;
-                float frozenOceanArea = 0f;
-
-                for (int c = 0; c < simData.climates.Length; c++)
-                {
-                    CellClimate clim = simData.climates[c];
-
-                    if (body.waterLevel > -5000f && simData.topologies[c].altitude < body.waterLevel)
-                    {
-                        if (clim.iceCover > 0.5f) { totalAlbedo += 0.6f; frozenOceanArea += 1f; }
-                        else { totalAlbedo += 0.1f; oceanArea += 1f; }
-                    }
-                    else
-                    {
-                        if (clim.iceCover > 0.5f) totalAlbedo += 0.6f;
-                        else if (clim.biomass > 0.5f) totalAlbedo += 0.15f;
-                        else totalAlbedo += 0.25f;
-                    }
-                }
-                float surfaceAlbedo = totalAlbedo / simData.climates.Length;
-
-                float atmosThickness = Mathf.Clamp01((float)body.surfacePressureAtm / 2.0f);
-                float globalAlbedo = Mathf.Lerp(surfaceAlbedo, 0.3f, atmosThickness);
-
-                float effectiveOceanFraction = (oceanArea + (frozenOceanArea * 0.15f)) / simData.climates.Length;
-                float oceanCurve = Mathf.Sqrt(Mathf.Clamp01(effectiveOceanFraction * 2.0f));
-
-                double distanceAU = body.orbit.semiMajorAxis / AstroMath.AU_TO_KM;
-                float blackbody = AstroMath.CalculateBlackbodyTemperature(starLuminosity, distanceAU, globalAlbedo);
-
-                float freezingPt = body.oceanLiquid != null ? body.oceanLiquid.baseFreezingPointKelvin : 273.15f;
-                float boilingPt = body.oceanLiquid != null ? body.oceanLiquid.baseBoilingPointKelvin : 373.15f;
-
-                float baseTemp = blackbody + body.greenhouseHeatContribution;
-
-                float blendFactor = Mathf.Clamp01((float)body.surfacePressureAtm / 5.0f);
-                float rawMaxTemp = baseTemp * 1.2f;
-                float trueMaxTemp = Mathf.Lerp(rawMaxTemp, baseTemp, blendFactor);
-
-                if (trueMaxTemp > boilingPt && body.waterLevel > -5000f)
-                {
-                    SystemDataGenerator.Instance.TriggerRunawayGreenhouse(body);
-                }
-
-                float dynamicLapseRate = (float)(body.surfaceGravity / 9.8) * 6.5f;
-                float tempFactor = Mathf.Clamp01(blackbody / 288f);
-                float pressureFactor = Mathf.Clamp01((float)body.surfacePressureAtm / 0.05f);
-
-                float rainStrength = oceanCurve * tempFactor * pressureFactor;
-
-                float globalSoil = body.soilBaseThickness * (1.0f + (float)body.surfacePressureAtm) * (float)(body.surfaceGravity / 9.8) * (1.0f + rainStrength);
-                globalSoil = Mathf.Clamp(globalSoil, 0.1f, 3.0f);
-
-                Color iceCol = body.oceanLiquid != null ? body.oceanLiquid.iceColor : Color.white;
-
-                float absTilt = Mathf.Abs((float)body.axialTilt);
-                float eqInsolation, poleInsolation;
-                if (absTilt <= 54f)
-                {
-                    float t = absTilt / 54f;
-                    eqInsolation = 1.0f - (t * 0.5f);
-                    poleInsolation = t * 0.5f;
-                }
-                else
-                {
-                    float t = (absTilt - 54f) / 36f;
-                    eqInsolation = 0.5f - (t * 0.5f);
-                    poleInsolation = 0.5f + (t * 0.5f);
-                }
-
-                PlanetClimateState state = new PlanetClimateState
-                {
-                    blackbodyTemp = blackbody,
-                    greenhouseHeat = body.greenhouseHeatContribution,
-                    atmosphericPressure = (float)body.surfacePressureAtm,
-                    lapseRate = dynamicLapseRate,
-                    globalRainStrength = rainStrength,
-                    freezingPoint = freezingPt,
-                    boilingPoint = boilingPt,
-                    isTidallyLocked = body.isTidallyLocked,
-                    sunDirection = Vector3.right,
-                    waterLevel = body.waterLevel,
-
-                    minAltitude = 0f,
-                    maxAltitude = maxAltitudes[s],
-                    globalSoilThickness = globalSoil,
-                    soilDryColor = body.soilDryColor,
-                    soilWetColor = body.soilWetColor,
-                    dominantBedrockId = body.dominantBedrockId,
-                    secondaryBedrockId = body.secondaryBedrockId,
-                    dominantBedrockColor = body.dominantBedrockColor,
-                    secondaryBedrockColor = body.secondaryBedrockColor,
-                    iceColor = new Vector3(iceCol.r, iceCol.g, iceCol.b),
-
-                    eqInsolation = eqInsolation,
-                    poleInsolation = poleInsolation
-                };
-
-                ClimateEquilibriumJob job = new ClimateEquilibriumJob
-                {
-                    topologies = simData.topologies,
-                    rainFactors = simData.rainFactors,
-                    climates = simData.climates,
-                    terrainVisuals = simData.terrainVisuals,
-                    state = state
-                };
-
-                jobHandles.Add(job.Schedule(simData.topologies.Length, 64));
-            }
-
-            JobHandle.CompleteAll(jobHandles.AsArray());
-            jobHandles.Dispose();
+            JobHandle.CompleteAll(handles.AsArray());
+            handles.Dispose();
 
             if (i % 10 == 0 || i == cycles - 1)
             {
@@ -732,55 +755,114 @@ public class ClimateResolver : MonoBehaviour
 
                 foreach (var simData in simDataList)
                 {
-                    UpdateVisuals(simData);
-
-                    simData.terrainVisuals.CopyTo(simData.meshData.terrainVisuals);
-                    simData.climates.CopyTo(simData.meshData.climates);
-
-                    for (int j = 0; j < simData.topologies.Length; j++)
-                    {
-                        var t = simData.topologies[j];
-                        t.rainFactor = simData.rainFactors[j];
-                        simData.topologies[j] = t;
-                    }
-                    simData.topologies.CopyTo(simData.meshData.topologies);
-
-                    TerrainVisualData[] highResArray = simData.body.localViewData.terrainVisuals;
-                    TerrainVisualData[] lowResArray = simData.body.systemViewData.terrainVisuals;
-                    int[] map = simData.body.lowToHighMap;
-
-                    for (int j = 0; j < lowResArray.Length; j++) lowResArray[j] = highResArray[map[j]];
-                }
-
-                foreach (var body in bodies)
-                {
-                    if (body.visualObject != null)
-                    {
-                        Planet p = body.visualObject.GetComponent<Planet>();
-                        if (p != null) p.UpdateTerrainBuffer();
-                    }
+                    FinalizePlanetUpdate(simData);
                 }
                 await Task.Yield();
             }
         }
     }
 
-    private void UpdateVisuals(PlanetSimulationData simData)
+    private PlanetClimateState CalculateGlobalState(PlanetSimulationData simData, double starLuminosity)
     {
-        Color iceColor = simData.body.oceanLiquid != null ? simData.body.oceanLiquid.iceColor : Color.white;
+        CelestialBody body = simData.body;
 
-        for (int i = 0; i < simData.terrainVisuals.Length; i++)
+        float totalCells = simData.climates.Length;
+        float surfaceAlbedo = 0.3f;
+        float oceanFraction = 0f;
+
+        if (totalCells > 0)
         {
-            TerrainVisualData vis = simData.terrainVisuals[i];
-            CellClimate clim = simData.climates[i];
+            float totalAlbedo = (body.globalIceCoverage * 0.6f) + (body.globalOceanCoverage * 0.1f) + (body.globalSnowCoverage * 0.6f) + (body.globalBiomassCoverage * 0.15f) + (body.globalDesertCoverage * 0.25f);
+            surfaceAlbedo = totalAlbedo;
 
-            vis.surfaceData = new Vector4(clim.iceCover, clim.biomass, clim.liquidDepth, 0f);
-
-            vis.iceColorR = iceColor.r;
-            vis.iceColorG = iceColor.g;
-            vis.iceColorB = iceColor.b;
-
-            simData.terrainVisuals[i] = vis;
+            float effectiveOceanFraction = body.globalOceanCoverage + (body.globalIceCoverage * 0.15f);
+            oceanFraction = Mathf.Sqrt(Mathf.Clamp01(effectiveOceanFraction * 2.0f));
         }
+
+        float atmosThickness = Mathf.Clamp01((float)body.surfacePressureAtm / 2.0f);
+        float globalAlbedo = Mathf.Lerp(surfaceAlbedo, 0.3f, atmosThickness);
+
+        double distanceAU = body.orbit.semiMajorAxis / AstroMath.AU_TO_KM;
+        float blackbody = AstroMath.CalculateBlackbodyTemperature(starLuminosity, distanceAU, globalAlbedo);
+
+        float freezingPt = body.oceanLiquid != null ? body.oceanLiquid.baseFreezingPointKelvin : 273.15f;
+        float boilingPt = body.oceanLiquid != null ? body.oceanLiquid.baseBoilingPointKelvin : 373.15f;
+
+        float baseTemp = blackbody + body.greenhouseHeatContribution;
+
+        float blendFactor = Mathf.Clamp01((float)body.surfacePressureAtm / 5.0f);
+        float rawMaxTemp = baseTemp * 1.2f;
+        float trueMaxTemp = Mathf.Lerp(rawMaxTemp, baseTemp, blendFactor);
+
+        if (trueMaxTemp > boilingPt && body.waterLevel > -5000f)
+        {
+            SystemDataGenerator.Instance.TriggerRunawayGreenhouse(body);
+        }
+
+        float dynamicLapseRate = (float)(body.surfaceGravity / 9.8) * 6.5f;
+        float tempFactor = Mathf.Clamp01(blackbody / 288f);
+        float pressureFactor = Mathf.Clamp01((float)body.surfacePressureAtm / 0.05f);
+
+        float rainStrength = oceanFraction * tempFactor * pressureFactor;
+
+        float globalSoil = body.soilBaseThickness * (1.0f + (float)body.surfacePressureAtm) * (float)(body.surfaceGravity / 9.8) * (1.0f + rainStrength);
+        globalSoil = Mathf.Clamp(globalSoil, 0.1f, 3.0f);
+
+        Color iceCol = body.oceanLiquid != null ? body.oceanLiquid.iceColor : Color.white;
+
+        float absTilt = Mathf.Abs((float)body.axialTilt);
+        float eqInsolation, poleInsolation;
+        if (absTilt <= 54f)
+        {
+            float t = absTilt / 54f;
+            eqInsolation = 1.0f - (t * 0.5f);
+            poleInsolation = t * 0.5f;
+        }
+        else
+        {
+            float t = (absTilt - 54f) / 36f;
+            eqInsolation = 0.5f - (t * 0.5f);
+            poleInsolation = 0.5f + (t * 0.5f);
+        }
+
+        return new PlanetClimateState
+        {
+            blackbodyTemp = blackbody,
+            greenhouseHeat = body.greenhouseHeatContribution,
+            atmosphericPressure = (float)body.surfacePressureAtm,
+            lapseRate = dynamicLapseRate,
+            globalRainStrength = rainStrength,
+            freezingPoint = freezingPt,
+            boilingPoint = boilingPt,
+            isTidallyLocked = body.isTidallyLocked,
+            sunDirection = Vector3.right,
+            waterLevel = body.waterLevel,
+
+            minAltitude = 0f,
+            maxAltitude = simData.maxAltitude,
+            globalSoilThickness = globalSoil,
+            soilDryColor = body.soilDryColor,
+            soilWetColor = body.soilWetColor,
+            dominantBedrockId = body.dominantBedrockId,
+            secondaryBedrockId = body.secondaryBedrockId,
+            dominantBedrockColor = body.dominantBedrockColor,
+            secondaryBedrockColor = body.secondaryBedrockColor,
+            iceColor = new Vector3(iceCol.r, iceCol.g, iceCol.b),
+
+            eqInsolation = eqInsolation,
+            poleInsolation = poleInsolation
+        };
+    }
+
+    private void ApplyStatsToBody(CelestialBody body, PlanetStats stats, int totalCells)
+    {
+        body.globalMinTemperature = stats.minTemp;
+        body.globalMaxTemperature = stats.maxTemp;
+
+        body.globalOceanCoverage = (float)stats.oceanCount / totalCells;
+        body.globalIceCoverage = (float)stats.iceCount / totalCells;
+        body.globalSnowCoverage = (float)stats.snowCount / totalCells;
+        body.globalBiomassCoverage = (float)stats.bioCount / totalCells;
+        body.globalDesertCoverage = (float)stats.barrenCount / totalCells;
     }
 }

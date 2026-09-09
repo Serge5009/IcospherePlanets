@@ -59,7 +59,7 @@ public class SystemDataGenerator : MonoBehaviour
     private void Update()
     {
         if (TimeManager.Instance == null) return;
-        double time = TimeManager.Instance.totalSeconds;
+        double time = TimeManager.Instance.totalGameSeconds;
         foreach (var body in allBodies) body.UpdateRotation(time);
     }
 

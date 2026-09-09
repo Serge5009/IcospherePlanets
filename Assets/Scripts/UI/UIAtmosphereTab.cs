@@ -129,7 +129,6 @@ public class UIAtmosphereTab : UITabPanel
         }
     }
 
-
     private void ChangeGlobalPressure(double multiplier)
     {
         if (currentBody == null) return;
@@ -188,6 +187,6 @@ public class UIAtmosphereTab : UITabPanel
         SystemDataGenerator.Instance.UpdateAtmosphericProperties(currentBody);
         Refresh();
 
-        _ = ClimateResolver.Instance.ResolveEquilibriumAsync(new List<CelestialBody> { currentBody }, 1);
+        ClimateResolver.Instance.TickClimateEquilibrium(new List<CelestialBody> { currentBody });
     }
 }

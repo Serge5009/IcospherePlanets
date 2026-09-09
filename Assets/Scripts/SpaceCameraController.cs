@@ -208,7 +208,7 @@ public class SpaceCameraController : MonoBehaviour
 
         if (currentState == CameraState.System || currentState == CameraState.Interstellar)
         {
-            targetFocus = SystemDisplayManager.Instance.CalculateSystemViewPosition(focusedBody, TimeManager.Instance.totalSeconds).ToVector3();
+            targetFocus = SystemDisplayManager.Instance.CalculateSystemViewPosition(focusedBody, TimeManager.Instance.totalGameSeconds).ToVector3();
 
             float distMult = SystemDisplayManager.Instance.trueScaleMultiplier;
             float targetMinZ = (float)(focusedBody.localSystemBoundaryKm * distMult);
@@ -340,7 +340,8 @@ public class SpaceCameraController : MonoBehaviour
             targetDistance /= scaleRatio;
             currentDistance /= scaleRatio;
             distanceVelocity /= scaleRatio;
-            currentFocusPoint = SystemDisplayManager.Instance.CalculateSystemViewPosition(focusedBody, TimeManager.Instance.totalSeconds).ToVector3();
+
+            currentFocusPoint = SystemDisplayManager.Instance.CalculateSystemViewPosition(focusedBody, TimeManager.Instance.totalGameSeconds).ToVector3();
 
             ViewManager.Instance.TransitionToSystemView();
             ExecuteTransition();

@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using TMPro;
 using System.Text;
+using System.Collections.Generic;
 
 public class UIOceanTab : UITabPanel, IPointerUpHandler
 {
@@ -119,9 +120,7 @@ public class UIOceanTab : UITabPanel, IPointerUpHandler
     {
         if (currentBody == null) return;
 
-        Debug.Log("Slider Released: Recalculating Climate Equilibrium...");
-
-        _ = ClimateResolver.Instance.ResolveEquilibriumAsync(new System.Collections.Generic.List<CelestialBody> { currentBody }, 1);
+        ClimateResolver.Instance.TickClimateEquilibrium(new List<CelestialBody> { currentBody });
     }
 
     private void ChangeVolume(double amountKm3)
@@ -149,7 +148,7 @@ public class UIOceanTab : UITabPanel, IPointerUpHandler
         UpdateStatsText();
         DrawHypsometricGraph();
 
-        _ = ClimateResolver.Instance.ResolveEquilibriumAsync(new System.Collections.Generic.List<CelestialBody> { currentBody }, 1);
+        ClimateResolver.Instance.TickClimateEquilibrium(new List<CelestialBody> { currentBody });
     }
 
     private void UpdateStatsText()

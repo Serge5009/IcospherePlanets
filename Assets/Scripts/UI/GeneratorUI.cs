@@ -41,9 +41,8 @@ public class GeneratorUI : MonoBehaviour
         await SystemMeshGenerator.Instance.GenerateMeshesAsync(SystemDataGenerator.Instance.allBodies, msg => statusText.text = msg);
 
         int cycles = Mathf.RoundToInt(cyclesSlider.value);
-        int visualUpdateFrequency = Mathf.Max(1, cycles / 100);
 
-        await ClimateResolver.Instance.ResolveEquilibriumAsync(SystemDataGenerator.Instance.allBodies, cycles, msg => statusText.text = msg);
+        await ClimateResolver.Instance.GenerateInitialClimateAsync(SystemDataGenerator.Instance.allBodies, cycles, msg => statusText.text = msg);
 
         statusText.text = "Simulation Complete.";
 

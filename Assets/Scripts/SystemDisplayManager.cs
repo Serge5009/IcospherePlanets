@@ -55,7 +55,7 @@ public class SystemDisplayManager : MonoBehaviour
     {
         if (TimeManager.Instance == null || SystemDataGenerator.Instance == null) return;
 
-        double currentTime = TimeManager.Instance.totalSeconds;
+        double currentTime = TimeManager.Instance.totalGameSeconds;
         float currentZ = SpaceCameraController.Instance != null ? SpaceCameraController.Instance.currentZLevel : 1f;
 
         foreach (var body in SystemDataGenerator.Instance.allBodies)

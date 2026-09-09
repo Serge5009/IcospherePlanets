@@ -42,7 +42,7 @@ public class ViewManager : MonoBehaviour
             currentLocalPlanet.transform.rotation = Quaternion.Euler(0, 0, remainingPlanetTilt) * Quaternion.Euler(0, visualPlanetAngle, 0);
             skyRotationOffset = Quaternion.Euler(0, visualSkyAngle, 0) * Quaternion.Euler(0, 0, -camTilt);
 
-            UpdateProxyBodies(TimeManager.Instance.totalSeconds);
+            UpdateProxyBodies(TimeManager.Instance.totalGameSeconds);
         }
     }
 
