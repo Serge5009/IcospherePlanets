@@ -702,6 +702,8 @@ public class ClimateResolver : MonoBehaviour
     {
         ApplyStatsToBody(simData.body, simData.statsResult[0], simData.climates.Length);
 
+        simData.body.isVisualsDirty = true;
+
         simData.terrainVisuals.CopyTo(simData.meshData.terrainVisuals);
         simData.climates.CopyTo(simData.meshData.climates);
 
@@ -722,18 +724,11 @@ public class ClimateResolver : MonoBehaviour
         int[] map = simData.body.lowToHighMap;
         for (int j = 0; j < lowResArray.Length; j++) lowResArray[j] = highResArray[map[j]];
 
-        if (simData.body.visualObject != null)
-        {
-            Planet p = simData.body.visualObject.GetComponent<Planet>();
-            if (p != null) p.UpdateTerrainBuffer();
-        }
-
         if (MapModeManager.Instance != null)
         {
             MapModeManager.Instance.ApplyModeToAllPlanets();
         }
     }
-
 
     private async Task RunGenerationCycles(List<PlanetSimulationData> simDataList, List<CelestialBody> bodies, int cycles, string phaseName, Action<string> onProgress)
     {

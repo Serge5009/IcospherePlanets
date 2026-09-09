@@ -144,6 +144,20 @@ public class SystemDataGenerator : MonoBehaviour
         return pool[0].template;
     }
 
+    private LiquidTemplate GetRandomLiquid(List<WeightedLiquid> pool)
+    {
+        if (pool == null || pool.Count == 0) return null;
+        float total = 0;
+        foreach (var w in pool) total += w.weight;
+        float roll = UnityEngine.Random.Range(0, total);
+        foreach (var w in pool)
+        {
+            roll -= w.weight;
+            if (roll <= 0) return w.template;
+        }
+        return pool[0].template;
+    }
+
     private SoilTemplate GetRandomSoil(List<WeightedSoil> pool)
     {
         if (pool == null || pool.Count == 0) return null;
@@ -398,6 +412,13 @@ public class SystemDataGenerator : MonoBehaviour
             double targetVapor = baseCapacity * 0.1 * oceanFraction * tempProgress;
 
             body.atmosphericGasesKg[vaporId] += targetVapor;
+
+            if (body.frozenVolatilesKg.ContainsKey(vaporId))
+            {
+                body.atmosphericGasesKg[vaporId] += body.frozenVolatilesKg[vaporId];
+                body.frozenVolatilesKg.Remove(vaporId);
+            }
+
             UpdateAtmosphericProperties(body);
         }
 

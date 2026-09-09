@@ -58,6 +58,8 @@ public class CelestialBody
 
     public bool isHighResReady = false;
 
+    public bool isVisualsDirty = false;
+
     public BedrockTemplate dominantBedrock;
     public BedrockTemplate secondaryBedrock;
     public LiquidTemplate oceanLiquid;

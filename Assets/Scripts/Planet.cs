@@ -151,6 +151,15 @@ public class Planet : MonoBehaviour
         }
     }
 
+    private void Update()
+    {
+        if (bodyData != null && bodyData.isVisualsDirty)
+        {
+            UpdateTerrainBuffer();
+            bodyData.isVisualsDirty = false;
+        }
+    }
+
     private void HandleAtmosphereToggled(bool show)
     {
         if (bodyData.atmosphereObject != null)

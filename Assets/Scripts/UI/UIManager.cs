@@ -54,6 +54,14 @@ public class UIManager : MonoBehaviour
             float newX = Mathf.Lerp(currentX, targetX, Time.deltaTime * slideSpeed);
             leftPanel.anchoredPosition = new Vector2(newX, leftPanel.anchoredPosition.y);
         }
+
+        if (currentBody != null && currentBody.isVisualsDirty)
+        {
+            if (activeTab != null)
+            {
+                activeTab.ReceiveData(currentBody, currentCellId);
+            }
+        }
     }
 
     public void SwitchTab(UITabPanel newTab)
