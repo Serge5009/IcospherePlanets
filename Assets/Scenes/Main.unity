@@ -9231,6 +9231,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: ed774da2537cd874e948a7be75800808, type: 2}
   - {fileID: 11400000, guid: 951008581c03c324f8b1ffff9341db89, type: 2}
   - {fileID: 11400000, guid: 49814a82f4612524dae5d5193e9884fa, type: 2}
+  - {fileID: 11400000, guid: 3857adb1fcaac5748a2d78d63efa87cf, type: 2}
   resources:
   - {fileID: 11400000, guid: 128b4c70b9888a64ebd18d15b5a96e09, type: 2}
   - {fileID: 11400000, guid: 21de14e7cf1232a49885f61244cabd89, type: 2}
