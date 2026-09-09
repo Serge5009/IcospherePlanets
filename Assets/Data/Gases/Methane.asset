@@ -17,6 +17,8 @@ MonoBehaviour:
   greenhouseMultiplier: 3
   toxicity: 0.5
   molarMass: 16.04
+  freezingPointKelvin: 90.7
   formsClouds: 1
+  isCarbonCycleGas: 0
   skyColor: {r: 0, g: 0.5943396, b: 0.34328237, a: 1}
   cloudColor: {r: 0.3479886, g: 0.6415094, b: 0.51708215, a: 1}

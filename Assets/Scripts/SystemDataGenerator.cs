@@ -35,14 +35,10 @@ public class SystemDataGenerator : MonoBehaviour
     public List<WeightedSoil> habitableSoils;
     public List<WeightedSoil> outerSoils;
 
-    [Header("Accretion Pools: Gases")]
-    public List<WeightedGas> innerGases;
-    public List<WeightedGas> outerGases;
-    public List<WeightedGas> giantGases;
-
-    [Header("Accretion Pools: Oceans")]
-    public List<WeightedLiquid> habitableLiquids;
-    public List<WeightedLiquid> outerLiquids;
+    // FIXED: Unified physics-based pools
+    [Header("Accretion Pools: Gases & Oceans")]
+    public List<WeightedGas> primordialGases;
+    public List<WeightedLiquid> primordialLiquids;
 
     [Header("Subdivision Math")]
     public float targetCellRadiusKm = 50f;
@@ -149,20 +145,6 @@ public class SystemDataGenerator : MonoBehaviour
         return pool[0].template;
     }
 
-    private LiquidTemplate GetRandomLiquid(List<WeightedLiquid> pool)
-    {
-        if (pool == null || pool.Count == 0) return null;
-        float total = 0;
-        foreach (var w in pool) total += w.weight;
-        float roll = UnityEngine.Random.Range(0, total);
-        foreach (var w in pool)
-        {
-            roll -= w.weight;
-            if (roll <= 0) return w.template;
-        }
-        return pool[0].template;
-    }
-
     private SoilTemplate GetRandomSoil(List<WeightedSoil> pool)
     {
         if (pool == null || pool.Count == 0) return null;
@@ -213,7 +195,7 @@ public class SystemDataGenerator : MonoBehaviour
         body.oceanColor = Color.black;
         body.oceanVolumeKm3 = 0;
         body.waterLevel = -9999f;
-        body.lastCalculatedWaterLevel = -9999f; // FIXED
+        body.lastCalculatedWaterLevel = -9999f;
     }
 
     private void CalculateCoreAndMagnetosphere(CelestialBody body)
@@ -256,9 +238,10 @@ public class SystemDataGenerator : MonoBehaviour
         }
     }
 
-    private void CalculateAtmosphere(CelestialBody body, double distanceAU, double frostLine)
+    private void CalculateAtmosphere(CelestialBody body, double distanceAU)
     {
         body.atmosphericGasesKg.Clear();
+        body.frozenVolatilesKg.Clear();
         body.surfacePressureAtm = 0;
         body.greenhouseHeatContribution = 0;
         body.toxicityLevel = 0;
@@ -270,44 +253,66 @@ public class SystemDataGenerator : MonoBehaviour
         double gravFactor = Math.Max(0.01, body.surfaceGravity / 9.8);
         double atmosphericCapacityKg = baseCapacity * magFactor * gravFactor;
 
-        double accretedMass = baseCapacity;
-        if (distanceAU > frostLine) accretedMass *= UnityEngine.Random.Range(5f, 50f);
-
+        double accretedMass = baseCapacity * UnityEngine.Random.Range(0.5f, 2.0f);
         double finalMass = Math.Min(accretedMass, atmosphericCapacityKg);
 
-        if (finalMass > 0)
+        double starSolarMasses = star.massKg / AstroMath.SOLAR_MASS_KG;
+        double starLuminosity = AstroMath.CalculateLuminosity(starSolarMasses);
+        float initialTemp = AstroMath.CalculateBlackbodyTemperature(starLuminosity, distanceAU, 0.3f);
+
+        if (finalMass > 0 && primordialGases != null && primordialGases.Count > 0)
         {
-            List<WeightedGas> gasPool;
-            if (body.bodyType == BodyType.GasGiant || body.bodyType == BodyType.IceGiant) gasPool = giantGases;
-            else if (distanceAU < frostLine) gasPool = innerGases;
-            else gasPool = outerGases;
+            float totalWeight = 0;
+            foreach (var wg in primordialGases) totalWeight += wg.weight;
 
-            if (gasPool != null && gasPool.Count > 0)
+            foreach (var wg in primordialGases)
             {
-                float totalWeight = 0;
-                foreach (var wg in gasPool) totalWeight += wg.weight;
+                if (wg.template == null) continue;
 
-                foreach (var wg in gasPool)
+                // FIXED: Escape Velocity Filter
+                // Gravity * MolarMass / Temp. Light gases escape small/hot planets.
+                double retention = 1.0;
+                if (body.bodyType == BodyType.RockyPlanet || body.bodyType == BodyType.Moon || body.bodyType == BodyType.DwarfPlanet)
                 {
-                    if (wg.template == null) continue;
-                    double gasMass = finalMass * (wg.weight / totalWeight);
-                    gasMass *= UnityEngine.Random.Range(0.8f, 1.2f);
-                    if (gasMass > 0) body.atmosphericGasesKg[wg.template.gasId] = gasMass;
+                    retention = Math.Clamp((body.surfaceGravity * wg.template.molarMass) / initialTemp, 0.0, 1.0);
+                }
+
+                double gasMass = finalMass * (wg.weight / totalWeight) * retention;
+                gasMass *= UnityEngine.Random.Range(0.8f, 1.2f);
+
+                if (gasMass > 0)
+                {
+                    // FIXED: Temperature Filter (Atmosphere vs Volatiles)
+                    if (initialTemp < wg.template.freezingPointKelvin)
+                    {
+                        if (!body.frozenVolatilesKg.ContainsKey(wg.template.gasId)) body.frozenVolatilesKg[wg.template.gasId] = 0;
+                        body.frozenVolatilesKg[wg.template.gasId] += gasMass;
+                    }
+                    else
+                    {
+                        if (!body.atmosphericGasesKg.ContainsKey(wg.template.gasId)) body.atmosphericGasesKg[wg.template.gasId] = 0;
+                        body.atmosphericGasesKg[wg.template.gasId] += gasMass;
+                    }
                 }
             }
 
-            if (body.waterLevel > -5000f && body.oceanLiquid != null && body.oceanLiquid.supportsCarbonCycle)
+            // FIXED: Baseline CO2 to prevent dead habitable zones
+            if (body.bodyType == BodyType.RockyPlanet)
             {
-                List<byte> keysToScrub = new List<byte>();
-                foreach (var key in body.atmosphericGasesKg.Keys)
+                GasTemplate co2 = primordialGases.FirstOrDefault(g => g.template != null && g.template.isCarbonCycleGas).template;
+                if (co2 != null)
                 {
-                    GasTemplate gas = DataLibrary.Instance.GetGas(key);
-                    if (gas != null && gas.isCarbonCycleGas) keysToScrub.Add(key);
-                }
-
-                foreach (var key in keysToScrub)
-                {
-                    body.atmosphericGasesKg[key] *= UnityEngine.Random.Range(0.05f, 0.2f);
+                    double baselineCO2 = baseCapacity * 0.005;
+                    if (initialTemp < co2.freezingPointKelvin)
+                    {
+                        if (!body.frozenVolatilesKg.ContainsKey(co2.gasId)) body.frozenVolatilesKg[co2.gasId] = 0;
+                        body.frozenVolatilesKg[co2.gasId] += baselineCO2;
+                    }
+                    else
+                    {
+                        if (!body.atmosphericGasesKg.ContainsKey(co2.gasId)) body.atmosphericGasesKg[co2.gasId] = 0;
+                        body.atmosphericGasesKg[co2.gasId] += baselineCO2;
+                    }
                 }
             }
 
@@ -330,15 +335,12 @@ public class SystemDataGenerator : MonoBehaviour
     {
         if (body.oceanVolumeKm3 > 0) return false;
 
-        List<LiquidTemplate> allLiquids = new List<LiquidTemplate>();
-        if (DataLibrary.Instance.liquids != null)
-        {
-            allLiquids.AddRange(DataLibrary.Instance.liquids);
-            allLiquids.Sort((a, b) => a.baseFreezingPointKelvin.CompareTo(b.baseFreezingPointKelvin));
-        }
+        List<WeightedLiquid> allLiquids = new List<WeightedLiquid>(primordialLiquids);
+        allLiquids.Sort((a, b) => a.template.baseFreezingPointKelvin.CompareTo(b.template.baseFreezingPointKelvin));
 
-        foreach (var liquid in allLiquids)
+        foreach (var wl in allLiquids)
         {
+            LiquidTemplate liquid = wl.template;
             if (liquid == null) continue;
 
             if (body.globalMaxTemperature > liquid.baseBoilingPointKelvin) continue;
@@ -348,23 +350,11 @@ public class SystemDataGenerator : MonoBehaviour
                 if (body.globalMaxTemperature > liquid.baseFreezingPointKelvin) continue;
             }
 
-            if (body.globalMaxTemperature > liquid.baseFreezingPointKelvin)
+            if (body.globalMaxTemperature > liquid.baseFreezingPointKelvin ||
+               (body.globalMaxTemperature <= liquid.baseFreezingPointKelvin && UnityEngine.Random.value > 0.5f))
             {
                 ApplyLiquid(body, liquid, maxAltitude);
                 return true;
-            }
-
-            if (body.globalMaxTemperature <= liquid.baseFreezingPointKelvin)
-            {
-                if (UnityEngine.Random.value > 0.5f)
-                {
-                    ApplyLiquid(body, liquid, maxAltitude);
-                    return true;
-                }
-                else
-                {
-                    break;
-                }
             }
         }
         return false;
@@ -383,13 +373,23 @@ public class SystemDataGenerator : MonoBehaviour
 
         body.oceanColor = liquid.shallowColor;
 
-        if (liquid.evaporatesInto != null && body.surfacePressureAtm >= 0.05)
+        // FIXED: Instant Target Vapor Injection
+        if (liquid.evaporatesInto != null)
         {
             byte vaporId = liquid.evaporatesInto.gasId;
             if (!body.atmosphericGasesKg.ContainsKey(vaporId)) body.atmosphericGasesKg[vaporId] = 0;
 
+            int levelInt = Mathf.Clamp(Mathf.FloorToInt(body.waterLevel), 0, body.hypsometricCurveSqKm.Length - 1);
+            double oceanAreaSqKm = body.hypsometricCurveSqKm[levelInt];
+            double oceanFraction = oceanAreaSqKm / body.totalSurfaceAreaSqKm;
+
+            float tempRange = liquid.baseBoilingPointKelvin - liquid.baseFreezingPointKelvin;
+            float tempProgress = Mathf.Clamp01((body.globalMaxTemperature - liquid.baseFreezingPointKelvin) / tempRange);
+
             double baseCapacity = 5.15e18 * body.massEarths;
-            body.atmosphericGasesKg[vaporId] += baseCapacity * 0.02;
+            double targetVapor = baseCapacity * 0.1 * oceanFraction * tempProgress;
+
+            body.atmosphericGasesKg[vaporId] += targetVapor;
             UpdateAtmosphericProperties(body);
         }
 
@@ -563,7 +563,7 @@ public class SystemDataGenerator : MonoBehaviour
                 AssignAccretionMaterials(planet, distanceAU, frostLine);
 
                 CalculateCoreAndMagnetosphere(planet);
-                CalculateAtmosphere(planet, distanceAU, frostLine);
+                CalculateAtmosphere(planet, distanceAU); // FIXED: Removed frostLine
 
                 if (type == BodyType.GasGiant || type == BodyType.IceGiant) planet.archetype = PlanetArchetype.GasGiant;
                 else if (planet.isCoreActive) planet.archetype = PlanetArchetype.ActiveTerrestrial;
@@ -612,7 +612,7 @@ public class SystemDataGenerator : MonoBehaviour
             SetThreadSafeParams(dwarf);
             AssignAccretionMaterials(dwarf, distanceAU, frostLine);
             CalculateCoreAndMagnetosphere(dwarf);
-            CalculateAtmosphere(dwarf, distanceAU, frostLine);
+            CalculateAtmosphere(dwarf, distanceAU); // FIXED
             dwarf.archetype = PlanetArchetype.Barren;
             SpawnBeltObject(dwarf, distanceAU, 0.05f, 5f);
         }
@@ -630,7 +630,7 @@ public class SystemDataGenerator : MonoBehaviour
             SetThreadSafeParams(major);
             AssignAccretionMaterials(major, distanceAU, frostLine);
             CalculateCoreAndMagnetosphere(major);
-            CalculateAtmosphere(major, distanceAU, frostLine);
+            CalculateAtmosphere(major, distanceAU); // FIXED
             major.archetype = PlanetArchetype.Barren;
             SpawnBeltObject(major, distanceAU, 0.1f, 10f);
         }
@@ -648,7 +648,7 @@ public class SystemDataGenerator : MonoBehaviour
             SetThreadSafeParams(minor);
             AssignAccretionMaterials(minor, distanceAU, frostLine);
             CalculateCoreAndMagnetosphere(minor);
-            CalculateAtmosphere(minor, distanceAU, frostLine);
+            CalculateAtmosphere(minor, distanceAU); // FIXED
             minor.archetype = PlanetArchetype.Barren;
             SpawnBeltObject(minor, distanceAU, 0.15f, 15f);
         }
@@ -708,7 +708,7 @@ public class SystemDataGenerator : MonoBehaviour
                 planet.AddOrbitingBody(moon, parameters);
 
                 CalculateCoreAndMagnetosphere(moon);
-                CalculateAtmosphere(moon, distanceAU, frostLine);
+                CalculateAtmosphere(moon, distanceAU); // FIXED
 
                 if (moonMass / AstroMath.EARTH_MASS_KG > 0.1 && distanceAU > frostLine && moon.isCoreActive) moon.archetype = PlanetArchetype.ActiveIce;
                 else moon.archetype = PlanetArchetype.Barren;
@@ -729,7 +729,7 @@ public class SystemDataGenerator : MonoBehaviour
             SetThreadSafeParams(comet);
             AssignAccretionMaterials(comet, frostLine * 5.0, frostLine);
             CalculateCoreAndMagnetosphere(comet);
-            CalculateAtmosphere(comet, frostLine * 5.0, frostLine);
+            CalculateAtmosphere(comet, frostLine * 5.0); // FIXED
             comet.archetype = PlanetArchetype.Barren;
 
             OrbitalParameters parameters = new OrbitalParameters

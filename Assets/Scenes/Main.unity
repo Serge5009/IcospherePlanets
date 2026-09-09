@@ -155,7 +155,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -24.99997}
+  m_AnchoredPosition: {x: 0, y: -25}
   m_SizeDelta: {x: 0, y: -50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &22906227
@@ -2916,7 +2916,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -24.99997}
+  m_AnchoredPosition: {x: 0, y: -25}
   m_SizeDelta: {x: 0, y: -50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &505660834
@@ -7954,7 +7954,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -24.99997}
+  m_AnchoredPosition: {x: 0, y: -25}
   m_SizeDelta: {x: 0, y: -50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1546179152
@@ -9171,45 +9171,26 @@ MonoBehaviour:
     weight: 70
   - template: {fileID: 11400000, guid: c60a8c4e9810a2141a56a5115a877040, type: 2}
     weight: 80
-  innerGases:
-  - template: {fileID: 11400000, guid: 5ba4626302b751843a24607f5b477f61, type: 2}
-    weight: 10
-  - template: {fileID: 11400000, guid: 2a9d0a51218fce84e9925cab31a4d1c4, type: 2}
-    weight: 6
+  primordialGases:
   - template: {fileID: 11400000, guid: 951008581c03c324f8b1ffff9341db89, type: 2}
-    weight: 4
-  - template: {fileID: 11400000, guid: 49814a82f4612524dae5d5193e9884fa, type: 2}
+    weight: 1
+  - template: {fileID: 11400000, guid: 5ba4626302b751843a24607f5b477f61, type: 2}
+    weight: 1
+  - template: {fileID: 11400000, guid: 3857adb1fcaac5748a2d78d63efa87cf, type: 2}
+    weight: 1
+  - template: {fileID: 11400000, guid: c5d9be51e959e624793cc7e8c19efd01, type: 2}
+    weight: 1
+  - template: {fileID: 11400000, guid: 2a9d0a51218fce84e9925cab31a4d1c4, type: 2}
     weight: 1
   - template: {fileID: 11400000, guid: ed774da2537cd874e948a7be75800808, type: 2}
-    weight: 0.5
-  outerGases:
-  - template: {fileID: 11400000, guid: 2a9d0a51218fce84e9925cab31a4d1c4, type: 2}
-    weight: 10
-  - template: {fileID: 11400000, guid: c5d9be51e959e624793cc7e8c19efd01, type: 2}
-    weight: 8
-  - template: {fileID: 11400000, guid: 951008581c03c324f8b1ffff9341db89, type: 2}
-    weight: 3
-  - template: {fileID: 11400000, guid: 5ba4626302b751843a24607f5b477f61, type: 2}
-    weight: 2
-  giantGases:
-  - template: {fileID: 11400000, guid: 3857adb1fcaac5748a2d78d63efa87cf, type: 2}
-    weight: 25
-  - template: {fileID: 11400000, guid: c5d9be51e959e624793cc7e8c19efd01, type: 2}
-    weight: 5
-  - template: {fileID: 11400000, guid: 951008581c03c324f8b1ffff9341db89, type: 2}
-    weight: 4
+    weight: 1
   - template: {fileID: 11400000, guid: 49814a82f4612524dae5d5193e9884fa, type: 2}
-    weight: 2
-  habitableLiquids:
-  - template: {fileID: 11400000, guid: 4f87b6cb74a67034cade05b3981ec84e, type: 2}
-    weight: 10
+    weight: 1
+  primordialLiquids:
   - template: {fileID: 11400000, guid: 177c9b8d0dd8d524ca68e04394c76231, type: 2}
-    weight: 2
-  outerLiquids:
+    weight: 1
   - template: {fileID: 11400000, guid: cde1d204ff13c9d4fbc6280856b247b8, type: 2}
-    weight: 10
-  - template: {fileID: 11400000, guid: 177c9b8d0dd8d524ca68e04394c76231, type: 2}
-    weight: 5
+    weight: 1
   - template: {fileID: 11400000, guid: 4f87b6cb74a67034cade05b3981ec84e, type: 2}
     weight: 1
   targetCellRadiusKm: 50
@@ -10646,7 +10627,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -25.00003}
+  m_AnchoredPosition: {x: 0, y: -25}
   m_SizeDelta: {x: 0, y: -50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2104299512

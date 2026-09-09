@@ -11,6 +11,9 @@ public class GasTemplate : ScriptableObject
     public float molarMass;
 
     [Header("Mechanics")]
+    [Tooltip("The temperature at which this gas freezes out of the atmosphere into Volatiles.")]
+    public float freezingPointKelvin = 50f;
+
     [Tooltip("Does this gas condense into visible clouds? (e.g., H2O, CH4)")]
     public bool formsClouds = false;
 
