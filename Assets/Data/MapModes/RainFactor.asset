@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 12148f8385dd0d446b1120857da8ab28, type: 3}
   m_Name: RainFactor
   m_EditorClassIdentifier: Assembly-CSharp::MapModeTemplate
-  modeName: Rain Factor
+  modeName: Rain
   modeType: 0
   dataTarget: 5
   scaleType: 1

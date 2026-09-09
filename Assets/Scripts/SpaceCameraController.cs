@@ -9,7 +9,7 @@ public class SpaceCameraController : MonoBehaviour
 
     [Header("State Machine")]
     public CameraState currentState = CameraState.System;
-    public float currentZLevel { get; private set; } = 1f;
+    public float currentZLevel = 1f;
     private CelestialBody focusedBody;
 
     [Header("Input Actions")]
