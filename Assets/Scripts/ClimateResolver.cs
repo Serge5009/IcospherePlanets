@@ -376,6 +376,7 @@ public struct ClimateEquilibriumJob : IJobParallelFor
 
         TerrainVisualData vis = terrainVisuals[i];
         vis.bedrockColor = finalGroundCol;
+        vis.surfaceData = new Vector4(clim.iceCover, clim.biomass, clim.liquidDepth, 0f);
         vis.iceColorR = state.iceColor.x;
         vis.iceColorG = state.iceColor.y;
         vis.iceColorB = state.iceColor.z;
@@ -525,9 +526,9 @@ public class ClimateResolver : MonoBehaviour
         }
     }
 
-    public async Task GenerateInitialClimateAsync(List<CelestialBody> bodies, int cycles, Action<string> onProgress = null)
+    public async Task GenerateInitialClimateAsync(List<CelestialBody> bodies, int dryCycles, int wetCycles, int simCycles, Action<string> onProgress = null)
     {
-        Debug.Log($"Generating Initial Climate Equilibrium for {cycles} cycles...");
+        Debug.Log($"Generating Initial Climate Equilibrium...");
 
         if (isJobRunning) currentJobHandle.Complete();
         foreach (var sim in activeSimulations.Values) sim.Dispose();
@@ -574,8 +575,7 @@ public class ClimateResolver : MonoBehaviour
             activeSimulations.Add(body, simData);
         }
 
-        int phase1Cycles = cycles / 2;
-        await RunGenerationCycles(simDataList, bodies, phase1Cycles, "Phase 1 (Dry)", onProgress);
+        await RunGenerationCycles(simDataList, bodies, dryCycles, "Phase 1 (Dry)", onProgress);
 
         onProgress?.Invoke("Phase 2: Seeding Oceans...");
         for (int s = 0; s < simDataList.Count; s++)
@@ -604,8 +604,9 @@ public class ClimateResolver : MonoBehaviour
         }
         await Task.Yield();
 
-        int phase3Cycles = cycles - phase1Cycles;
-        await RunGenerationCycles(simDataList, bodies, phase3Cycles, "Phase 3 (Wet)", onProgress);
+        await RunGenerationCycles(simDataList, bodies, wetCycles, "Phase 3 (Wet)", onProgress);
+
+        await RunVolatileSimulationCycles(simDataList, bodies, simCycles, "Phase 4 (Volatiles)", onProgress);
 
         foreach (var simData in simDataList)
         {
@@ -757,6 +758,40 @@ public class ClimateResolver : MonoBehaviour
         }
     }
 
+    private async Task RunVolatileSimulationCycles(List<PlanetSimulationData> simDataList, List<CelestialBody> bodies, int cycles, string phaseName, Action<string> onProgress)
+    {
+        for (int i = 0; i < cycles; i++)
+        {
+            foreach (var simData in simDataList)
+            {
+                if (SimulationDirector.Instance != null)
+                {
+                    SimulationDirector.Instance.ProcessVolatileExchange(simData.body);
+                }
+            }
+
+            NativeList<JobHandle> handles = new NativeList<JobHandle>(simDataList.Count, Allocator.Temp);
+            foreach (var simData in simDataList)
+            {
+                handles.Add(SchedulePlanetUpdate(simData));
+            }
+
+            JobHandle.CompleteAll(handles.AsArray());
+            handles.Dispose();
+
+            if (i % 10 == 0 || i == cycles - 1)
+            {
+                onProgress?.Invoke($"Resolving Climate {phaseName}: Cycle {i + 1} / {cycles}");
+
+                foreach (var simData in simDataList)
+                {
+                    FinalizePlanetUpdate(simData);
+                }
+                await Task.Yield();
+            }
+        }
+    }
+
     private PlanetClimateState CalculateGlobalState(PlanetSimulationData simData, double starLuminosity)
     {
         CelestialBody body = simData.body;
@@ -764,6 +799,7 @@ public class ClimateResolver : MonoBehaviour
         float totalCells = simData.climates.Length;
         float surfaceAlbedo = 0.3f;
         float oceanFraction = 0f;
+        float oceanCurve = 0f;
 
         if (totalCells > 0)
         {
@@ -772,6 +808,7 @@ public class ClimateResolver : MonoBehaviour
 
             float effectiveOceanFraction = body.globalOceanCoverage + (body.globalIceCoverage * 0.15f);
             oceanFraction = Mathf.Sqrt(Mathf.Clamp01(effectiveOceanFraction * 2.0f));
+            oceanCurve = oceanFraction;
         }
 
         float atmosThickness = Mathf.Clamp01((float)body.surfacePressureAtm / 2.0f);
@@ -798,7 +835,16 @@ public class ClimateResolver : MonoBehaviour
         float tempFactor = Mathf.Clamp01(blackbody / 288f);
         float pressureFactor = Mathf.Clamp01((float)body.surfacePressureAtm / 0.05f);
 
-        float rainStrength = oceanFraction * tempFactor * pressureFactor;
+        float relativeHumidity = 0f;
+        if (body.oceanLiquid != null && body.oceanLiquid.evaporatesInto != null && body.targetVaporMassKg > 0)
+        {
+            byte vaporId = body.oceanLiquid.evaporatesInto.gasId;
+            double currentVapor = body.atmosphericGasesKg.ContainsKey(vaporId) ? body.atmosphericGasesKg[vaporId] : 0;
+            relativeHumidity = Mathf.Clamp01((float)(currentVapor / body.targetVaporMassKg));
+        }
+
+        float rainStrength = oceanCurve * relativeHumidity * tempFactor * pressureFactor;
+        body.globalRainStrength = rainStrength;
 
         float globalSoil = body.soilBaseThickness * (1.0f + (float)body.surfacePressureAtm) * (float)(body.surfaceGravity / 9.8) * (1.0f + rainStrength);
         globalSoil = Mathf.Clamp(globalSoil, 0.1f, 3.0f);
@@ -819,8 +865,6 @@ public class ClimateResolver : MonoBehaviour
             eqInsolation = 0.5f - (t * 0.5f);
             poleInsolation = 0.5f + (t * 0.5f);
         }
-
-        body.globalRainStrength = rainStrength;
 
         return new PlanetClimateState
         {

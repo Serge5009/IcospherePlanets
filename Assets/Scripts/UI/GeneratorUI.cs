@@ -7,8 +7,18 @@ public class GeneratorUI : MonoBehaviour
     [Header("UI Elements")]
     public GameObject menuPanel;
     public TMP_InputField seedInput;
-    public Slider cyclesSlider;
-    public TextMeshProUGUI cyclesText;
+
+    [Header("Cycle Sliders")]
+    public Slider dryCyclesSlider;
+    public TextMeshProUGUI dryCyclesText;
+
+    public Slider wetCyclesSlider;
+    public TextMeshProUGUI wetCyclesText;
+
+    public Slider simCyclesSlider;
+    public TextMeshProUGUI simCyclesText;
+
+    [Header("Controls")]
     public Button generateButton;
     public TextMeshProUGUI statusText;
 
@@ -16,10 +26,15 @@ public class GeneratorUI : MonoBehaviour
     {
         ShowMenu();
 
-        cyclesSlider.onValueChanged.AddListener(UpdateCyclesText);
+        if (dryCyclesSlider != null) dryCyclesSlider.onValueChanged.AddListener(UpdateDryText);
+        if (wetCyclesSlider != null) wetCyclesSlider.onValueChanged.AddListener(UpdateWetText);
+        if (simCyclesSlider != null) simCyclesSlider.onValueChanged.AddListener(UpdateSimText);
+
         generateButton.onClick.AddListener(StartGeneration);
 
-        UpdateCyclesText(cyclesSlider.value);
+        if (dryCyclesSlider != null) UpdateDryText(dryCyclesSlider.value);
+        if (wetCyclesSlider != null) UpdateWetText(wetCyclesSlider.value);
+        if (simCyclesSlider != null) UpdateSimText(simCyclesSlider.value);
     }
 
     public void ShowMenu()
@@ -32,10 +47,9 @@ public class GeneratorUI : MonoBehaviour
         }
     }
 
-    private void UpdateCyclesText(float value)
-    {
-        cyclesText.text = $"Simulation Cycles: {value:F0}";
-    }
+    private void UpdateDryText(float value) { if (dryCyclesText != null) dryCyclesText.text = $"Dry Cycles: {value:F0}"; }
+    private void UpdateWetText(float value) { if (wetCyclesText != null) wetCyclesText.text = $"Wet Cycles: {value:F0}"; }
+    private void UpdateSimText(float value) { if (simCyclesText != null) simCyclesText.text = $"Sim Cycles: {value:F0}"; }
 
     private async void StartGeneration()
     {
@@ -49,9 +63,11 @@ public class GeneratorUI : MonoBehaviour
 
         await SystemMeshGenerator.Instance.GenerateMeshesAsync(SystemDataGenerator.Instance.allBodies, msg => statusText.text = msg);
 
-        int cycles = Mathf.RoundToInt(cyclesSlider.value);
+        int dry = dryCyclesSlider != null ? Mathf.RoundToInt(dryCyclesSlider.value) : 10;
+        int wet = wetCyclesSlider != null ? Mathf.RoundToInt(wetCyclesSlider.value) : 10;
+        int sim = simCyclesSlider != null ? Mathf.RoundToInt(simCyclesSlider.value) : 20;
 
-        await ClimateResolver.Instance.GenerateInitialClimateAsync(SystemDataGenerator.Instance.allBodies, cycles, msg => statusText.text = msg);
+        await ClimateResolver.Instance.GenerateInitialClimateAsync(SystemDataGenerator.Instance.allBodies, dry, wet, sim, msg => statusText.text = msg);
 
         statusText.text = "Simulation Complete.";
 

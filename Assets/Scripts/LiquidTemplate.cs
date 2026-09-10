@@ -10,6 +10,9 @@ public class LiquidTemplate : ScriptableObject
     public float baseFreezingPointKelvin = 273.15f;
     public float baseBoilingPointKelvin = 373.15f;
 
+    [Tooltip("Density in kg per cubic kilometer. (Water = 1e12, Methane = 4.22e11)")]
+    public double densityKgPerKm3 = 1000000000000.0;
+
     public GasTemplate evaporatesInto;
 
     [Header("Mechanics")]

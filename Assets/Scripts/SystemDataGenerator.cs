@@ -388,7 +388,7 @@ public class SystemDataGenerator : MonoBehaviour
         body.oceanLiquid = liquid;
 
         double maxBasinVolume = HypsometricMath.GetVolumeFromLevel(body, maxAltitude);
-        float fillPercentage = UnityEngine.Random.Range(0.05f, 0.40f);
+        float fillPercentage = UnityEngine.Random.Range(0.05f, 0.80f);
         body.oceanVolumeKm3 = maxBasinVolume * fillPercentage;
 
         body.waterLevel = HypsometricMath.GetLevelFromVolume(body, body.oceanVolumeKm3);
@@ -409,9 +409,13 @@ public class SystemDataGenerator : MonoBehaviour
             float tempProgress = Mathf.Clamp01((body.globalMaxTemperature - liquid.baseFreezingPointKelvin) / tempRange);
 
             double baseCapacity = 5.15e18 * body.massEarths;
-            double targetVapor = baseCapacity * 0.1 * oceanFraction * tempProgress;
 
-            body.atmosphericGasesKg[vaporId] += targetVapor;
+            double targetVapor = baseCapacity * 0.02 * oceanFraction * tempProgress;
+
+            double currentVapor = body.atmosphericGasesKg[vaporId];
+            double neededVapor = Math.Max(0, targetVapor - currentVapor);
+
+            body.atmosphericGasesKg[vaporId] += neededVapor;
 
             if (body.frozenVolatilesKg.ContainsKey(vaporId))
             {
@@ -422,7 +426,7 @@ public class SystemDataGenerator : MonoBehaviour
             UpdateAtmosphericProperties(body);
         }
 
-        Debug.Log($"[Seeding] {body.name} seeded with {liquid.liquidName}. Volume: {body.oceanVolumeKm3:N0} km3. Sea Level: {body.waterLevel:F0}m");
+        Debug.Log($"[Seeding] {body.name} seeded with {liquid.liquidName}. Coverage: {fillPercentage * 100:F0}%. Sea Level: {body.waterLevel:F0}m");
     }
 
     public void TriggerRunawayGreenhouse(CelestialBody body)
@@ -432,8 +436,8 @@ public class SystemDataGenerator : MonoBehaviour
             byte vaporId = body.oceanLiquid.evaporatesInto.gasId;
             if (!body.atmosphericGasesKg.ContainsKey(vaporId)) body.atmosphericGasesKg[vaporId] = 0;
 
-            double baseCapacity = 5.15e18 * body.massEarths;
-            body.atmosphericGasesKg[vaporId] += baseCapacity * 2.0;
+            double oceanMassKg = body.oceanVolumeKm3 * body.oceanLiquid.densityKgPerKm3;
+            body.atmosphericGasesKg[vaporId] += oceanMassKg;
 
             UpdateAtmosphericProperties(body);
         }
