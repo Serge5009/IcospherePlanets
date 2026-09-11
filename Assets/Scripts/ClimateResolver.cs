@@ -606,7 +606,17 @@ public class ClimateResolver : MonoBehaviour
 
         await RunGenerationCycles(simDataList, bodies, wetCycles, "Phase 3 (Wet)", onProgress);
 
-        await RunVolatileSimulationCycles(simDataList, bodies, simCycles, "Phase 4 (Volatiles)", onProgress);
+        onProgress?.Invoke("Phase 4: Forcing Volatile Equilibrium...");
+        foreach (var simData in simDataList)
+        {
+            if (SimulationDirector.Instance != null)
+            {
+                SimulationDirector.Instance.ForceInstantVolatileEquilibrium(simData.body);
+            }
+        }
+        await RunGenerationCycles(simDataList, bodies, 1, "Phase 4 (Snap)", onProgress);
+
+        await RunVolatileSimulationCycles(simDataList, bodies, simCycles, "Phase 5 (Volatiles)", onProgress);
 
         foreach (var simData in simDataList)
         {
@@ -766,6 +776,7 @@ public class ClimateResolver : MonoBehaviour
             {
                 if (SimulationDirector.Instance != null)
                 {
+                    SimulationDirector.Instance.SimulateChemistry(simData.body);
                     SimulationDirector.Instance.ProcessVolatileExchange(simData.body);
                 }
             }

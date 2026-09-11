@@ -16,6 +16,7 @@ MonoBehaviour:
   liquidName: Methane
   baseFreezingPointKelvin: 90.7
   baseBoilingPointKelvin: 111.7
+  densityKgPerKm3: 422000000000
   evaporatesInto: {fileID: 11400000, guid: c5d9be51e959e624793cc7e8c19efd01, type: 2}
   supportsCarbonCycle: 0
   shallowColor: {r: 0.5613208, g: 1, b: 0.5613208, a: 1}

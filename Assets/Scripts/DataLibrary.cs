@@ -11,6 +11,7 @@ public class DataLibrary : MonoBehaviour
     public GasTemplate[] gases;
     public ResourceTemplate[] resources;
     public SoilTemplate[] soils;
+    public AtmosphericReaction[] reactions;
 
     private Dictionary<byte, BedrockTemplate> bedrockDict;
     private Dictionary<byte, LiquidTemplate> liquidDict;

@@ -296,6 +296,8 @@ public class SystemDataGenerator : MonoBehaviour
             {
                 if (wg.template == null) continue;
 
+                if (!isGiant && wg.template.gasId == primarySolventGasId) continue;
+
                 double retention = 1.0;
                 if (!isGiant)
                 {
@@ -323,10 +325,10 @@ public class SystemDataGenerator : MonoBehaviour
             if (body.bodyType == BodyType.RockyPlanet)
             {
                 GasTemplate co2 = primordialGases.FirstOrDefault(g => g.template != null && g.template.isCarbonCycleGas).template;
-                if (co2 != null)
+                if (co2 != null && co2.gasId != primarySolventGasId)
                 {
                     double baselineCO2 = baseCapacity * 0.005;
-                    if (initialTemp < co2.freezingPointKelvin && co2.gasId != primarySolventGasId)
+                    if (initialTemp < co2.freezingPointKelvin)
                     {
                         if (!body.frozenVolatilesKg.ContainsKey(co2.gasId)) body.frozenVolatilesKg[co2.gasId] = 0;
                         body.frozenVolatilesKg[co2.gasId] += baselineCO2;
@@ -339,6 +341,7 @@ public class SystemDataGenerator : MonoBehaviour
                 }
             }
 
+            ResolveInitialChemistry(body);
             UpdateAtmosphericProperties(body);
         }
 
@@ -352,6 +355,69 @@ public class SystemDataGenerator : MonoBehaviour
             body.atmosphereCloudScale = Mathf.Pow(20f, UnityEngine.Random.value);
         else
             body.atmosphereCloudScale = UnityEngine.Random.Range(2.5f, 10f);
+    }
+
+    public void ResolveInitialChemistry(CelestialBody body)
+    {
+        if (DataLibrary.Instance.reactions == null || DataLibrary.Instance.reactions.Length == 0) return;
+
+        bool reactionOccurred = true;
+        int safetyCounter = 0;
+
+        while (reactionOccurred && safetyCounter < 100)
+        {
+            reactionOccurred = false;
+            safetyCounter++;
+
+            foreach (var reaction in DataLibrary.Instance.reactions)
+            {
+                if (reaction == null || reaction.inputs.Length == 0) continue;
+
+                double limitingMoles = double.MaxValue;
+                bool hasAllInputs = true;
+
+                foreach (var input in reaction.inputs)
+                {
+                    if (input.gas == null || input.moles <= 0) continue;
+
+                    if (!body.atmosphericGasesKg.TryGetValue(input.gas.gasId, out double currentMass) || currentMass <= 0)
+                    {
+                        hasAllInputs = false;
+                        break;
+                    }
+
+                    double currentMoles = currentMass / input.gas.molarMass;
+                    double maxReactionMoles = currentMoles / input.moles;
+
+                    if (maxReactionMoles < limitingMoles) limitingMoles = maxReactionMoles;
+                }
+
+                if (!hasAllInputs || limitingMoles <= 0) continue;
+
+                double actualReactingMoles = limitingMoles * 0.99;
+
+                if (actualReactingMoles < 1000) continue;
+
+                foreach (var input in reaction.inputs)
+                {
+                    if (input.gas == null) continue;
+                    double massToRemove = actualReactingMoles * input.moles * input.gas.molarMass;
+                    body.atmosphericGasesKg[input.gas.gasId] -= massToRemove;
+                    if (body.atmosphericGasesKg[input.gas.gasId] < 0) body.atmosphericGasesKg[input.gas.gasId] = 0;
+                }
+
+                foreach (var output in reaction.outputs)
+                {
+                    if (output.gas == null || output.moles <= 0) continue;
+                    double massToAdd = actualReactingMoles * output.moles * output.gas.molarMass;
+
+                    if (!body.atmosphericGasesKg.ContainsKey(output.gas.gasId)) body.atmosphericGasesKg[output.gas.gasId] = 0;
+                    body.atmosphericGasesKg[output.gas.gasId] += massToAdd;
+                }
+
+                reactionOccurred = true;
+            }
+        }
     }
 
     public bool TrySeedOceans(CelestialBody body, float maxAltitude)
@@ -409,13 +475,17 @@ public class SystemDataGenerator : MonoBehaviour
             float tempProgress = Mathf.Clamp01((body.globalMaxTemperature - liquid.baseFreezingPointKelvin) / tempRange);
 
             double baseCapacity = 5.15e18 * body.massEarths;
-
             double targetVapor = baseCapacity * 0.02 * oceanFraction * tempProgress;
 
             double currentVapor = body.atmosphericGasesKg[vaporId];
             double neededVapor = Math.Max(0, targetVapor - currentVapor);
 
             body.atmosphericGasesKg[vaporId] += neededVapor;
+
+            double volumeDelta = neededVapor / liquid.densityKgPerKm3;
+            body.oceanVolumeKm3 -= volumeDelta;
+            body.oceanVolumeKm3 = Math.Max(0, body.oceanVolumeKm3);
+            body.waterLevel = HypsometricMath.GetLevelFromVolume(body, body.oceanVolumeKm3);
 
             if (body.frozenVolatilesKg.ContainsKey(vaporId))
             {

@@ -16,6 +16,7 @@ MonoBehaviour:
   liquidName: Ammonia
   baseFreezingPointKelvin: 195.42
   baseBoilingPointKelvin: 239.81
+  densityKgPerKm3: 681000000000
   evaporatesInto: {fileID: 11400000, guid: 951008581c03c324f8b1ffff9341db89, type: 2}
   supportsCarbonCycle: 0
   shallowColor: {r: 0.60747904, g: 0.3517711, b: 0.8018868, a: 1}
