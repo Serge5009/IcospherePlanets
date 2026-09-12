@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
 
 public class SelectionManager : MonoBehaviour
 {
@@ -37,6 +38,12 @@ public class SelectionManager : MonoBehaviour
     {
         if (pointerPositionAction == null) return;
 
+        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+        {
+            ClearHover();
+            return;
+        }
+
         Vector2 mousePos = pointerPositionAction.action.ReadValue<Vector2>();
         Ray ray = Camera.main.ScreenPointToRay(mousePos);
         bool clicked = clickAction != null && clickAction.action.WasPressedThisFrame();
@@ -55,11 +62,7 @@ public class SelectionManager : MonoBehaviour
 
     private void HandleSystemViewSelection(Ray ray, bool clicked)
     {
-        if (currentHoveredPlanet != null)
-        {
-            currentHoveredPlanet.SetHoveredCell(-1);
-            currentHoveredPlanet = null;
-        }
+        ClearHover();
 
         if (clicked && Physics.Raycast(ray, out RaycastHit hit))
         {
@@ -85,11 +88,7 @@ public class SelectionManager : MonoBehaviour
 
                 if (!isMainPlanet)
                 {
-                    if (currentHoveredPlanet != null)
-                    {
-                        currentHoveredPlanet.SetHoveredCell(-1);
-                        currentHoveredPlanet = null;
-                    }
+                    ClearHover();
 
                     if (clicked)
                     {
@@ -134,7 +133,7 @@ public class SelectionManager : MonoBehaviour
                     {
                         if (currentHoveredPlanet != planet)
                         {
-                            if (currentHoveredPlanet != null) currentHoveredPlanet.SetHoveredCell(-1);
+                            ClearHover();
                             currentHoveredPlanet = planet;
                         }
 
@@ -150,6 +149,11 @@ public class SelectionManager : MonoBehaviour
             }
         }
 
+        ClearHover();
+    }
+
+    private void ClearHover()
+    {
         if (currentHoveredPlanet != null)
         {
             currentHoveredPlanet.SetHoveredCell(-1);
