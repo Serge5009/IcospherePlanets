@@ -18,7 +18,7 @@ MonoBehaviour:
   toxicity: 1
   molarMass: 60
   freezingPointKelvin: 195.42
-  formsClouds: 0
+  formsClouds: 1
   isCarbonCycleGas: 0
   skyColor: {r: 0.7075472, g: 0.50990355, b: 0.18356179, a: 1}
-  cloudColor: {r: 1, g: 1, b: 1, a: 0.8}
+  cloudColor: {r: 0.9528302, g: 0.8647865, b: 0.43596476, a: 1}

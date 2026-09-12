@@ -12269,6 +12269,8 @@ MonoBehaviour:
     weight: 1
   - template: {fileID: 11400000, guid: 49814a82f4612524dae5d5193e9884fa, type: 2}
     weight: 1
+  - template: {fileID: 11400000, guid: dd0c7608db86d2d47b5095b3397e8f8f, type: 2}
+    weight: 1
   primordialLiquids:
   - template: {fileID: 11400000, guid: 177c9b8d0dd8d524ca68e04394c76231, type: 2}
     weight: 1
@@ -12315,6 +12317,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 951008581c03c324f8b1ffff9341db89, type: 2}
   - {fileID: 11400000, guid: 49814a82f4612524dae5d5193e9884fa, type: 2}
   - {fileID: 11400000, guid: 3857adb1fcaac5748a2d78d63efa87cf, type: 2}
+  - {fileID: 11400000, guid: dd0c7608db86d2d47b5095b3397e8f8f, type: 2}
   resources:
   - {fileID: 11400000, guid: 128b4c70b9888a64ebd18d15b5a96e09, type: 2}
   - {fileID: 11400000, guid: 21de14e7cf1232a49885f61244cabd89, type: 2}
