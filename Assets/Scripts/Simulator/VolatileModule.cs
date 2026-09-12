@@ -20,6 +20,46 @@ public class VolatileModule : ISimulationModule
         bool atmosphereChanged = false;
         bool oceanChanged = false;
 
+        double totalMass = body.GetTotalAtmosphereMassKg();
+
+        if (body.oceanLiquid == null && totalMass > 0)
+        {
+            foreach (var kvp in body.atmosphericGasesKg)
+            {
+                double concentration = kvp.Value / totalMass;
+                if (concentration > 0.01)
+                {
+                    LiquidTemplate potentialLiquid = GetLiquidForVapor(kvp.Key);
+                    if (potentialLiquid != null)
+                    {
+                        if (body.globalMaxTemperature > potentialLiquid.baseFreezingPointKelvin &&
+                            body.globalMaxTemperature < potentialLiquid.baseBoilingPointKelvin)
+                        {
+                            body.oceanLiquid = potentialLiquid;
+                            body.oceanColor = potentialLiquid.shallowColor;
+                            oceanChanged = true;
+                            Debug.Log($"[Volatiles] {body.name} formed a new {potentialLiquid.liquidName} ocean from atmospheric vapor!");
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        else if (body.oceanLiquid != null && body.oceanVolumeKm3 <= 0)
+        {
+            byte vaporId = body.oceanLiquid.evaporatesInto != null ? body.oceanLiquid.evaporatesInto.gasId : (byte)255;
+            double vaporMass = body.atmosphericGasesKg.ContainsKey(vaporId) ? body.atmosphericGasesKg[vaporId] : 0;
+            double concentration = totalMass > 0 ? vaporMass / totalMass : 0;
+
+            if (concentration < 0.001)
+            {
+                Debug.Log($"[Volatiles] {body.name}'s {body.oceanLiquid.liquidName} ocean has completely dried up.");
+                body.oceanLiquid = null;
+                body.waterLevel = -9999f;
+                oceanChanged = true;
+            }
+        }
+
         if (body.oceanLiquid != null && body.oceanLiquid.evaporatesInto != null)
         {
             byte vaporId = body.oceanLiquid.evaporatesInto.gasId;
@@ -127,7 +167,7 @@ public class VolatileModule : ISimulationModule
             }
         }
 
-        double totalMass = body.GetTotalAtmosphereMassKg();
+        totalMass = body.GetTotalAtmosphereMassKg();
         double magFactor = Math.Max(0.01, body.magnetosphereStrength);
         double gravFactor = Math.Max(0.01, body.surfaceGravity / 9.8);
         double capacityKg = (5.15e18 * body.massEarths) * magFactor * gravFactor;
@@ -263,5 +303,19 @@ public class VolatileModule : ISimulationModule
         {
             AtmosphereBuilder.UpdateAtmosphericProperties(body);
         }
+    }
+
+    private LiquidTemplate GetLiquidForVapor(byte gasId)
+    {
+        if (DataLibrary.Instance == null || DataLibrary.Instance.liquids == null) return null;
+
+        foreach (var liquid in DataLibrary.Instance.liquids)
+        {
+            if (liquid != null && liquid.evaporatesInto != null && liquid.evaporatesInto.gasId == gasId)
+            {
+                return liquid;
+            }
+        }
+        return null;
     }
 }

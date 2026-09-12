@@ -120,11 +120,7 @@ public class UIOceanTab : UITabPanel, IPointerUpHandler
         currentBody.waterLevel = value;
         currentBody.oceanVolumeKm3 = HypsometricMath.GetVolumeFromLevel(currentBody, value);
 
-        if (currentBody.oceanLiquid == null && DataLibrary.Instance != null && DataLibrary.Instance.liquids.Length > 0)
-        {
-            currentBody.oceanLiquid = DataLibrary.Instance.liquids[0];
-            currentBody.oceanColor = currentBody.oceanLiquid.shallowColor;
-        }
+        if (currentBody.oceanLiquid == null) AssignBestLiquid();
 
         UpdateStatsText();
         DrawHypsometricGraph();
@@ -151,11 +147,7 @@ public class UIOceanTab : UITabPanel, IPointerUpHandler
 
         currentBody.waterLevel = HypsometricMath.GetLevelFromVolume(currentBody, currentBody.oceanVolumeKm3);
 
-        if (currentBody.oceanLiquid == null && currentBody.oceanVolumeKm3 > 0 && DataLibrary.Instance != null && DataLibrary.Instance.liquids.Length > 0)
-        {
-            currentBody.oceanLiquid = DataLibrary.Instance.liquids[0];
-            currentBody.oceanColor = currentBody.oceanLiquid.shallowColor;
-        }
+        if (currentBody.oceanLiquid == null && currentBody.oceanVolumeKm3 > 0) AssignBestLiquid();
 
         if (waterLevelSlider != null)
         {
@@ -168,6 +160,27 @@ public class UIOceanTab : UITabPanel, IPointerUpHandler
         DrawHypsometricGraph();
 
         ClimateResolver.Instance.TickClimateEquilibrium(new List<CelestialBody> { currentBody });
+    }
+
+    private void AssignBestLiquid()
+    {
+        if (DataLibrary.Instance == null || DataLibrary.Instance.liquids == null) return;
+
+        foreach (var liquid in DataLibrary.Instance.liquids)
+        {
+            if (liquid == null) continue;
+
+            if (currentBody.globalMaxTemperature > liquid.baseFreezingPointKelvin &&
+                currentBody.globalMaxTemperature < liquid.baseBoilingPointKelvin)
+            {
+                currentBody.oceanLiquid = liquid;
+                currentBody.oceanColor = liquid.shallowColor;
+                return;
+            }
+        }
+
+        currentBody.oceanLiquid = DataLibrary.Instance.liquids[0];
+        currentBody.oceanColor = currentBody.oceanLiquid.shallowColor;
     }
 
     private void UpdateStatsText()
