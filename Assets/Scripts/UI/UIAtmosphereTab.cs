@@ -184,7 +184,7 @@ public class UIAtmosphereTab : UITabPanel
 
     private void ApplyChanges()
     {
-        SystemDataGenerator.Instance.UpdateAtmosphericProperties(currentBody);
+        AtmosphereBuilder.UpdateAtmosphericProperties(currentBody);
         Refresh();
 
         ClimateResolver.Instance.TickClimateEquilibrium(new List<CelestialBody> { currentBody });

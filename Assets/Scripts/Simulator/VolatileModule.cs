@@ -2,162 +2,18 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class SimulationDirector : MonoBehaviour
+public class VolatileModule : ISimulationModule
 {
-    public static SimulationDirector Instance { get; private set; }
-
-    [Header("Debug Toggles")]
-    public bool simulateClimate = true;
-    public bool simulateEconomy = true;
-
-    private void Awake()
+    public void Initialize()
     {
-        if (Instance != null && Instance != this) Destroy(gameObject);
-        else Instance = this;
     }
 
-    private void Start()
+    public bool SimulateDay(CelestialBody body)
     {
-        if (TimeManager.Instance != null)
-        {
-            TimeManager.Instance.OnHourTick += HandleHourTick;
-            TimeManager.Instance.OnDayTick += HandleDayTick;
-            TimeManager.Instance.OnMonthTick += HandleMonthTick;
-            TimeManager.Instance.OnYearTick += HandleYearTick;
-        }
+        return false;
     }
 
-    private void OnDestroy()
-    {
-        if (TimeManager.Instance != null)
-        {
-            TimeManager.Instance.OnHourTick -= HandleHourTick;
-            TimeManager.Instance.OnDayTick -= HandleDayTick;
-            TimeManager.Instance.OnMonthTick -= HandleMonthTick;
-            TimeManager.Instance.OnYearTick -= HandleYearTick;
-        }
-    }
-
-    private void HandleHourTick() { }
-
-    private void HandleDayTick()
-    {
-        if (!simulateEconomy) return;
-    }
-
-    private void HandleMonthTick()
-    {
-        if (simulateClimate)
-        {
-            if (SystemDataGenerator.Instance == null || SystemDataGenerator.Instance.allBodies.Count == 0) return;
-
-            List<CelestialBody> bodiesNeedingEquilibrium = new List<CelestialBody>();
-
-            foreach (var body in SystemDataGenerator.Instance.allBodies)
-            {
-                bool chemChanged = SimulateChemistry(body);
-                bool volChanged = ProcessVolatileExchange(body);
-
-                if (chemChanged || volChanged)
-                {
-                    bodiesNeedingEquilibrium.Add(body);
-                }
-            }
-
-            if (bodiesNeedingEquilibrium.Count > 0)
-            {
-                ClimateResolver.Instance.TickClimateEquilibrium(bodiesNeedingEquilibrium);
-            }
-        }
-
-        if (simulateEconomy) { }
-    }
-
-    private void HandleYearTick() { }
-
-    public bool SimulateChemistry(CelestialBody body)
-    {
-        if (body.bodyType == BodyType.Star) return false;
-        if (DataLibrary.Instance.reactions == null || DataLibrary.Instance.reactions.Length == 0) return false;
-
-        bool atmosphereChanged = false;
-        double totalMass = body.GetTotalAtmosphereMassKg();
-        if (totalMass <= 0) return false;
-
-        foreach (var reaction in DataLibrary.Instance.reactions)
-        {
-            if (reaction == null || reaction.inputs.Length == 0) continue;
-
-            double limitingMoles = double.MaxValue;
-            double inputMassSum = 0;
-            bool hasAllInputs = true;
-
-            foreach (var input in reaction.inputs)
-            {
-                if (input.gas == null || input.moles <= 0) continue;
-
-                if (!body.atmosphericGasesKg.TryGetValue(input.gas.gasId, out double currentMass) || currentMass <= 0)
-                {
-                    hasAllInputs = false;
-                    break;
-                }
-
-                double currentMoles = currentMass / input.gas.molarMass;
-                double maxReactionMoles = currentMoles / input.moles;
-
-                if (maxReactionMoles < limitingMoles) limitingMoles = maxReactionMoles;
-                inputMassSum += currentMass;
-            }
-
-            if (!hasAllInputs || limitingMoles <= 0) continue;
-
-            double concentration = inputMassSum / totalMass;
-            double rateMultiplier = Math.Pow(concentration, 1.5);
-            double tempMultiplier = Math.Max(0.1, body.globalMaxTemperature / 288.0);
-
-            double actualReactingMoles = limitingMoles * reaction.baseReactionRate * rateMultiplier * tempMultiplier;
-
-            if (actualReactingMoles < 1000) continue;
-
-            foreach (var input in reaction.inputs)
-            {
-                if (input.gas == null) continue;
-                double massToRemove = actualReactingMoles * input.moles * input.gas.molarMass;
-                body.atmosphericGasesKg[input.gas.gasId] -= massToRemove;
-
-                if (body.atmosphericGasesKg[input.gas.gasId] < 0)
-                    body.atmosphericGasesKg[input.gas.gasId] = 0;
-            }
-
-            foreach (var output in reaction.outputs)
-            {
-                if (output.gas == null || output.moles <= 0) continue;
-                double massToAdd = actualReactingMoles * output.moles * output.gas.molarMass;
-
-                if (body.globalMinTemperature < output.gas.freezingPointKelvin)
-                {
-                    if (!body.frozenVolatilesKg.ContainsKey(output.gas.gasId)) body.frozenVolatilesKg[output.gas.gasId] = 0;
-                    body.frozenVolatilesKg[output.gas.gasId] += massToAdd;
-                }
-                else
-                {
-                    if (!body.atmosphericGasesKg.ContainsKey(output.gas.gasId)) body.atmosphericGasesKg[output.gas.gasId] = 0;
-                    body.atmosphericGasesKg[output.gas.gasId] += massToAdd;
-                }
-            }
-
-            atmosphereChanged = true;
-        }
-
-        if (atmosphereChanged)
-        {
-            SystemDataGenerator.Instance.UpdateAtmosphericProperties(body);
-        }
-
-        return atmosphereChanged;
-    }
-
-    public bool ProcessVolatileExchange(CelestialBody body)
+    public bool SimulateMonth(CelestialBody body)
     {
         if (body.bodyType == BodyType.Star || body.bodyType == BodyType.GasGiant || body.bodyType == BodyType.IceGiant) return false;
 
@@ -176,7 +32,6 @@ public class SimulationDirector : MonoBehaviour
             {
                 double maxEvapKg = body.oceanVolumeKm3 * body.oceanLiquid.densityKgPerKm3;
                 transferAmount = maxEvapKg * 0.10;
-
                 body.targetVaporMassKg = double.MaxValue;
             }
             else
@@ -280,7 +135,6 @@ public class SimulationDirector : MonoBehaviour
         if (totalMass > capacityKg)
         {
             double excessMass = totalMass - capacityKg;
-
             double overPressureRatio = excessMass / capacityKg;
             double leakPercentage = Math.Clamp(overPressureRatio * 0.10, 0.01, 0.90);
 
@@ -298,25 +152,23 @@ public class SimulationDirector : MonoBehaviour
             }
         }
 
-        // --- 4. RESOLVE ---
         if (oceanChanged)
         {
-            if (body.oceanVolumeKm3 <= 0)
-            {
-                body.waterLevel = -9999f;
-            }
-            else
-            {
-                body.waterLevel = HypsometricMath.GetLevelFromVolume(body, body.oceanVolumeKm3);
-            }
+            if (body.oceanVolumeKm3 <= 0) body.waterLevel = -9999f;
+            else body.waterLevel = HypsometricMath.GetLevelFromVolume(body, body.oceanVolumeKm3);
         }
 
         if (atmosphereChanged)
         {
-            SystemDataGenerator.Instance.UpdateAtmosphericProperties(body);
+            AtmosphereBuilder.UpdateAtmosphericProperties(body);
         }
 
         return atmosphereChanged || oceanChanged;
+    }
+
+    public bool SimulateYear(CelestialBody body)
+    {
+        return false;
     }
 
     public void ForceInstantVolatileEquilibrium(CelestialBody body)
@@ -409,7 +261,7 @@ public class SimulationDirector : MonoBehaviour
 
         if (atmosphereChanged)
         {
-            SystemDataGenerator.Instance.UpdateAtmosphericProperties(body);
+            AtmosphereBuilder.UpdateAtmosphericProperties(body);
         }
     }
 }
